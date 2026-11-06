@@ -1023,14 +1023,54 @@
       const previousTime=audio.currentTime;
       const previousIndex=queueIndex;
       const previousId=window.__davixiniCurrentTrackId;
-      const waitForMetadata=()=>new Promise((resolve,reject)=>{
-        if(audio.readyState>=1 && Number.isFinite(audio.duration)) return resolve();
-        const onReady=()=>{cleanup();resolve();};
-        const onError=()=>{cleanup();reject(new Error('no se pudo cargar la siguiente canción.'));};
+      // Espera a los metadatos de la URL solicitada, no a los que pueda
+      // conservar temporalmente el elemento de audio de la pista anterior.
+      const waitForSourceMetadata=(expectedUrl)=>new Promise((resolve,reject)=>{
+        if(audio.currentSrc===expectedUrl && audio.readyState>=1 && Number.isFinite(audio.duration)) return resolve();
         const cleanup=()=>{audio.removeEventListener('loadedmetadata',onReady);audio.removeEventListener('error',onError);clearTimeout(timer);};
-        const timer=setTimeout(()=>{cleanup();reject(new Error('la siguiente canción tardó demasiado en cargar.'));},10000);
-        audio.addEventListener('loadedmetadata',onReady,{once:true});
-        audio.addEventListener('error',onError,{once:true});
+        const onReady=()=>{
+          if(audio.currentSrc!==expectedUrl) return;
+          cleanup();
+          resolve();
+        };
+        const onError=()=>{
+          if(audio.currentSrc && audio.currentSrc!==expectedUrl) return;
+          cleanup();
+          reject(new Error('no se pudo cargar la siguiente canción.'));
+        };
+        const timer=setTimeout(()=>{cleanup();reject(new Error('la siguiente canción tardó demasiado en cargar.'));},12000);
+        audio.addEventListener('loadedmetadata',onReady);
+        audio.addEventListener('error',onError);
+      });
+      // No empieces a sonar hasta que el navegador confirme el seek. Esto evita
+      // que una carga tardía vuelva a poner la canción en 0:00 tras el relevo.
+      const seekAndWait=(target,expectedUrl)=>new Promise((resolve,reject)=>{
+        const safeTarget=Math.max(0,Math.min(Number(target)||0,Math.max(0,audio.duration-0.08)));
+        if(audio.currentSrc===expectedUrl && !audio.seeking && Math.abs(audio.currentTime-safeTarget)<0.04) return resolve();
+        const cleanup=()=>{audio.removeEventListener('seeked',onSeeked);audio.removeEventListener('error',onError);clearTimeout(timer);};
+        const onSeeked=()=>{
+          if(audio.currentSrc!==expectedUrl) return;
+          cleanup();
+          resolve();
+        };
+        const onError=()=>{
+          if(audio.currentSrc && audio.currentSrc!==expectedUrl) return;
+          cleanup();
+          reject(new Error('no se pudo posicionar la canción después del crossfade.'));
+        };
+        const timer=setTimeout(()=>{cleanup();reject(new Error('la búsqueda de posición tardó demasiado.'));},8000);
+        audio.addEventListener('seeked',onSeeked);
+        audio.addEventListener('error',onError);
+        try {
+          audio.currentTime=safeTarget;
+          if(!audio.seeking && Math.abs(audio.currentTime-safeTarget)<0.04) {
+            cleanup();
+            resolve();
+          }
+        } catch(error) {
+          cleanup();
+          reject(error);
+        }
       });
       try {
         // al cambiar el src puede quedar encolado el evento ended del audio anterior.
@@ -1043,10 +1083,8 @@
         audio.src=url;
         audio.playbackRate=playbackRate;
         audio.load();
-        await waitForMetadata();
-        if(Number.isFinite(audio.duration) && audio.duration>0) {
-          audio.currentTime=Math.min(Math.max(0,Number(resumeTime)||0),Math.max(0,audio.duration-0.05));
-        }
+        await waitForSourceMetadata(url);
+        await seekAndWait(resumeTime,url);
         audio.volume=Math.min(1,Math.max(0,Number(volume)||0));
         const track=getTrack(id);
         if(track) {
@@ -1068,8 +1106,8 @@
           audio.src=previousUrl;
           audio.load();
           try {
-            await waitForMetadata();
-            if(Number.isFinite(audio.duration)) audio.currentTime=Math.min(previousTime,Math.max(0,audio.duration-0.05));
+            await waitForSourceMetadata(previousUrl);
+            await seekAndWait(previousTime,previousUrl);
             audio.volume=Math.min(1,Math.max(0,Number(volume)||0));
             await audio.play();
           } catch(_) {}
