@@ -962,6 +962,7 @@
 
   function playCurrent() {
     const track=getTrack(queue[queueIndex]);
+    window.__davixiniCurrentTrackId = track?.id || null;
     if(!track?.blob) { toast('el archivo ya no está disponible.','error'); return; }
     if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl=URL.createObjectURL(track.blob);
@@ -976,7 +977,7 @@
   function stopPlayback() {
     audio.pause(); audio.removeAttribute('src'); audio.load();
     if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-    currentObjectUrl=null; queue=[]; queueIndex=-1; updatePlayer();
+    currentObjectUrl=null; queue=[]; queueIndex=-1; window.__davixiniCurrentTrackId=null; updatePlayer();
   }
 
   function nextTrack(direction=1) {
