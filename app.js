@@ -1026,51 +1026,36 @@
       // Espera a los metadatos de la URL solicitada, no a los que pueda
       // conservar temporalmente el elemento de audio de la pista anterior.
       const waitForSourceMetadata=(expectedUrl)=>new Promise((resolve,reject)=>{
-        if(audio.currentSrc===expectedUrl && audio.readyState>=1 && Number.isFinite(audio.duration)) return resolve();
+        const matches=()=>audio.src===expectedUrl;
+        if(matches() && audio.readyState>=1 && Number.isFinite(audio.duration)) return resolve();
+        let timer;
         const cleanup=()=>{audio.removeEventListener('loadedmetadata',onReady);audio.removeEventListener('error',onError);clearTimeout(timer);};
-        const onReady=()=>{
-          if(audio.currentSrc!==expectedUrl) return;
-          cleanup();
-          resolve();
-        };
-        const onError=()=>{
-          if(audio.currentSrc && audio.currentSrc!==expectedUrl) return;
-          cleanup();
-          reject(new Error('no se pudo cargar la siguiente canción.'));
-        };
-        const timer=setTimeout(()=>{cleanup();reject(new Error('la siguiente canción tardó demasiado en cargar.'));},12000);
+        const onReady=()=>{if(!matches())return;cleanup();resolve();};
+        const onError=()=>{if(!matches())return;cleanup();reject(new Error('el navegador no pudo cargar la canción entrante.'));};
         audio.addEventListener('loadedmetadata',onReady);
         audio.addEventListener('error',onError);
+        timer=setTimeout(()=>{cleanup();reject(new Error('la canción entrante no terminó de cargar sus metadatos.'));},12000);
+        if(matches() && audio.readyState>=1 && Number.isFinite(audio.duration)){cleanup();resolve();}
       });
-      // No empieces a sonar hasta que el navegador confirme el seek. Esto evita
-      // que una carga tardía vuelva a poner la canción en 0:00 tras el relevo.
       const seekAndWait=(target,expectedUrl)=>new Promise((resolve,reject)=>{
-        const safeTarget=Math.max(0,Math.min(Number(target)||0,Math.max(0,audio.duration-0.08)));
-        if(audio.currentSrc===expectedUrl && !audio.seeking && Math.abs(audio.currentTime-safeTarget)<0.04) return resolve();
+        const safeTarget=Math.max(0,Math.min(Number(target)||0,Math.max(0,audio.duration-0.01)));
+        if(audio.src===expectedUrl && !audio.seeking && Math.abs(audio.currentTime-safeTarget)<0.025) return resolve();
+        let timer;
         const cleanup=()=>{audio.removeEventListener('seeked',onSeeked);audio.removeEventListener('error',onError);clearTimeout(timer);};
         const onSeeked=()=>{
-          if(audio.currentSrc!==expectedUrl) return;
+          if(audio.src!==expectedUrl)return;
           cleanup();
+          if(Math.abs(audio.currentTime-safeTarget)>0.12) return reject(new Error('el navegador no respetó la posición exacta de la canción.'));
           resolve();
         };
-        const onError=()=>{
-          if(audio.currentSrc && audio.currentSrc!==expectedUrl) return;
-          cleanup();
-          reject(new Error('no se pudo posicionar la canción después del crossfade.'));
-        };
-        const timer=setTimeout(()=>{cleanup();reject(new Error('la búsqueda de posición tardó demasiado.'));},8000);
+        const onError=()=>{if(audio.src!==expectedUrl)return;cleanup();reject(new Error('falló la búsqueda de posición de la canción entrante.'));};
         audio.addEventListener('seeked',onSeeked);
         audio.addEventListener('error',onError);
-        try {
+        timer=setTimeout(()=>{cleanup();reject(new Error('el navegador tardó demasiado en fijar la posición de la canción.'));},10000);
+        try{
           audio.currentTime=safeTarget;
-          if(!audio.seeking && Math.abs(audio.currentTime-safeTarget)<0.04) {
-            cleanup();
-            resolve();
-          }
-        } catch(error) {
-          cleanup();
-          reject(error);
-        }
+          if(!audio.seeking && Math.abs(audio.currentTime-safeTarget)<0.025){cleanup();resolve();}
+        }catch(error){cleanup();reject(error);}
       });
       try {
         // al cambiar el src puede quedar encolado el evento ended del audio anterior.
