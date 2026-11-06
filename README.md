@@ -30,6 +30,23 @@ Biblioteca musical personal que funciona directamente en el navegador. Permite o
 - Restauración de copias anteriores de Mi música y de davixiniTracker.
 - PWA instalable y caché de interfaz para uso sin conexión cuando se aloja en HTTPS.
 
+## Biblioteca compartida con Supabase
+
+La web usa Supabase para servir una biblioteca compartida. Los visitantes pueden escuchar y consultar la colección, pero no pueden subir, sustituir, editar ni borrar contenido. La autorización real se aplica con Row Level Security (RLS) y políticas de Storage; ocultar botones en la interfaz no es la barrera de seguridad.
+
+### Configuración inicial
+
+1. Abre **Supabase → SQL Editor → New query** y ejecuta el contenido de `supabase-setup.sql`.
+2. En **Authentication → Users**, crea tu usuario de administrador. No habilites el registro público.
+3. Copia el UUID de ese usuario. En `supabase-setup.sql`, descomenta la consulta final, sustituye `PEGA-AQUI-EL-UUID-DE-TU-USUARIO` por el UUID y ejecútala en SQL Editor.
+4. Abre davixiniTracker y pulsa **acceso admin**. Inicia sesión con ese usuario.
+5. Crea álbumes e importa tus archivos desde tu navegador. Cuando termines, pulsa **publicar cambios**. A partir de ahí, la biblioteca estará disponible para visitantes.
+6. Para sustituir audio o modificar la colección, inicia sesión como administrador, realiza los cambios y vuelve a publicar.
+
+La URL del proyecto y la publishable key están en `supabase-config.js`. La publishable key está diseñada para usarse en el navegador; nunca añadas una `service_role` o secret key al repositorio. El bucket de medios es público para permitir la reproducción, así que los archivos que publiques podrán ser escuchados por cualquiera que visite la web.
+
+La biblioteca local antigua de IndexedDB no se borra al activar Supabase. Si ya tenías canciones guardadas, expórtalas desde **Ajustes y copias** antes de migrar; después puedes restaurar esa copia con tu sesión de administrador y publicar la colección.
+
 ## Ejecutar
 
 Puedes abrir `index.html` directamente en un navegador moderno. Para probar PWA y servicio offline, ejecuta:
