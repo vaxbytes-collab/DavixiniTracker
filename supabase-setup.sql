@@ -93,8 +93,8 @@ create policy "admins can delete playlists" on public.library_playlists
   for delete to authenticated using (public.is_library_admin());
 
 insert into storage.buckets (id, name, public, file_size_limit)
-values ('library-media', 'library-media', true, 524288000)
-on conflict (id) do update set public = true, file_size_limit = 524288000;
+values ('library-media', 'library-media', true, 52428800)
+on conflict (id) do update set public = true, file_size_limit = 52428800;
 
 drop policy if exists "public can read library media" on storage.objects;
 create policy "public can read library media" on storage.objects
