@@ -162,7 +162,7 @@
     }
   });
   document.addEventListener('submit',async e=>{if(e.target.id==='extraTrackForm'){e.preventDefault();await saveTrack(e.target.dataset.id,{lyrics:$('#extraLyrics').value,notes:$('#extraNotes').value});close();toast('letras y notas guardadas.');}if(e.target.id==='extraFilterForm'){e.preventDefault();const ts=await allTracks(),a=$('#fa').value.toLowerCase(),g=$('#fg').value.toLowerCase(),y=$('#fy').value;const found=ts.filter(t=>(!a||(t.artist||'').toLowerCase().includes(a))&&(!g||(t.genre||'').toLowerCase().includes(g))&&(!y||String(t.year||'')===y));$('#extraFilterResults').innerHTML='<p class="form-hint">'+found.length+' resultados</p>'+found.map(t=>'<p>'+esc(t.title)+' — '+esc(t.artist)+'</p>').join('');}});
-  audio.addEventListener('play',()=>{sessionStorage.setItem('dt-extra-plays',String(Number(sessionStorage.getItem('dt-extra-plays')||0)+1));});
+  audio.addEventListener('play',()=>{sessionStorage.setItem('dt-extra-plays',String(Number(sessionStorage.getItem('dt-extra-plays')||0)+1));sessionStorage.setItem('dt-extra-last-second',String(Math.floor(audio.currentTime)));});
   audio.addEventListener('timeupdate',()=>{
     if(!audio.paused){
       const sec=Math.floor(audio.currentTime);
