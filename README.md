@@ -37,7 +37,7 @@ La web usa Supabase para servir una biblioteca compartida. Los visitantes pueden
 ### Configuración inicial
 
 1. Abre **Supabase → SQL Editor → New query** y ejecuta el contenido de `supabase-setup.sql`.
-2. En **Authentication → Users**, crea tu usuario de administrador. No habilites el registro público.
+2. En **Authentication → Settings** (o la configuración del proveedor Email), desactiva **Allow new users to sign up**. Después, en **Authentication → Users**, crea tu usuario de administrador.
 3. Copia el UUID de ese usuario. En `supabase-setup.sql`, descomenta la consulta final, sustituye `PEGA-AQUI-EL-UUID-DE-TU-USUARIO` por el UUID y ejecútala en SQL Editor.
 4. Abre davixiniTracker y pulsa **acceso admin**. Inicia sesión con ese usuario.
 5. Crea álbumes e importa tus archivos desde tu navegador. Cuando termines, pulsa **publicar cambios**. A partir de ahí, la biblioteca estará disponible para visitantes.
