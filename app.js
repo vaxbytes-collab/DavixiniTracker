@@ -289,7 +289,16 @@
   function renderHome() {
     const latestAlbums = [...albums].slice(0,6);
     const latestTracks = [...tracks].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).slice(0,6);
-    root.innerHTML = `${pageHeader('archivo personal','tu música','Álbumes, canciones y playlists guardadas en este navegador.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
+    root.innerHTML = `<section class="home-hero">
+        <div class="home-hero-copy">
+          <p class="home-hero-eyebrow">DAVIXINITRACKER <span>·</span> TU ARCHIVO PERSONAL</p>
+          <h1>tu música.<br><span>tus reglas.</span></h1>
+          <p class="home-hero-description">todo lo que has guardado, ordenado a tu manera. sin algoritmo y sin salir de tu navegador.</p>
+          <div class="home-hero-actions"><button class="button button-primary" data-action="play-all-shuffle">${icon('shuffle')} escuchar algo</button><button class="button button-secondary" data-action="new-album">${icon('plus')} crear álbum</button></div>
+          <div class="home-hero-meta"><span><i></i> biblioteca local</span><span>${tracks.length} pistas</span><span>${albums.length} álbumes</span></div>
+        </div>
+        <div class="home-hero-art" aria-hidden="true"><div class="hero-orbit hero-orbit-one"></div><div class="hero-orbit hero-orbit-two"></div><div class="hero-record"><div class="hero-record-label">♫</div></div><span class="hero-note hero-note-one">♪</span><span class="hero-note hero-note-two">♫</span><span class="hero-art-caption">PLAY IT YOUR WAY</span></div>
+      </section>${pageHeader('archivo personal','tu música','Álbumes, canciones y playlists guardadas en este navegador.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
       ${statsMarkup()}
       <section class="section-block">${sectionHeading('álbumes', `${albums.length} en tu biblioteca`, `<button class="text-button" data-view="albums">ver todos ${icon('arrow')}</button>`)}
         ${albums.length ? `<div class="album-grid">${latestAlbums.map(albumCard).join('')}</div>` : emptyState('tu biblioteca está vacía','crea un álbum o importa algunas canciones para empezar.','new-album','crear primer álbum')}
@@ -524,7 +533,7 @@
 
   function showQueue() {
     const queuedTracks = queue.map((id,index)=>({track:getTrack(id),index})).filter(item=>item.track);
-    showModal('cola de reproducción',`${queuedTracks.length} canciones`, `${queuedTracks.length ? `<div class="modal-list">${queuedTracks.map(({track,index})=>`<div class="modal-list-item ${index===queueIndex?'queue-current':''}"><button class="track-main" data-action="queue-play" data-index="${index}" style="flex:1">${trackCoverMarkup(track)}<span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(albumForTrack(track)?.title||track.artist||'')}</small></span></button><button class="track-action" data-action="queue-remove" data-index="${index}" aria-label="Quitar de la cola">${icon('close')}</button></div>`).join('')}</div>` : '<p class="form-hint">la cola está vacía. reproduce un álbum o una playlist para llenarla.</p>'}<div class="modal-footer">${queuedTracks.length?'<button class="button button-danger" data-action="queue-clear">vaciar cola</button>':''}<button class="button button-secondary" data-modal-close>cerrar</button></div>`, true);
+    showModal('cola de reproducción',`${queuedTracks.length} canciones`, `${queuedTracks.length ? `<div class="modal-list">${queuedTracks.map(({track,index})=>`<div class="modal-list-item ${index===queueIndex?'queue-current':''}"><button class="track-main" data-action="queue-play" data-index="${index}" style="flex:1">${trackCoverMarkup(track)}<span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(albumForTrack(track)?.title||track.artist||'')}</small></span></button><span class="queue-reorder"><button class="track-action" data-action="queue-move-up" data-index="${index}" aria-label="Mover arriba" ${index===0?"disabled":""}>↑</button><button class="track-action" data-action="queue-move-down" data-index="${index}" aria-label="Mover abajo" ${index===queuedTracks.length-1?"disabled":""}>↓</button></span><button class="track-action" data-action="queue-remove" data-index="${index}" aria-label="Quitar de la cola">${icon('close')}</button></div>`).join('')}</div>` : '<p class="form-hint">la cola está vacía. reproduce un álbum o una playlist para llenarla.</p>'}<div class="modal-footer">${queuedTracks.length?'<button class="button button-danger" data-action="queue-clear">vaciar cola</button>':''}<button class="button button-secondary" data-modal-close>cerrar</button></div>`, true);
   }
 
   function settingsModal() {
@@ -1054,6 +1063,7 @@
   async function handleAction(button) {
     const {action,id}=button.dataset;
     if(action==='new-album') albumForm();
+    else if(action==='play-all-shuffle') { const mix=tracks.filter(track=>track.blob).sort(()=>Math.random()-.5); startQueue(mix); }
     else if(action==='new-playlist') playlistForm();
     else if(action==='open-album') { activeAlbumId=id; view='album'; render(); }
     else if(action==='open-playlist') { activePlaylistId=id; view='playlist'; render(); }
@@ -1105,7 +1115,8 @@
     else if(action==='select-import-album') { closeModal(); openFilePicker(id); }
     else if(action==='new-album-for-import') { closeModal(); albumForm(); $('#albumForm').dataset.importAfter=true; }
     else if(action==='queue-play') { queueIndex=Number(button.dataset.index); playCurrent(); closeModal(); }
-    else if(action==='queue-remove') { const index=Number(button.dataset.index); if(index===queueIndex) stopPlayback(); else { queue.splice(index,1); if(index<queueIndex) queueIndex--; } showQueue(); }
+    else if(action==='queue-remove') { const index=Number(button.dataset.index); if(index===queueIndex) stopPlayback(); else { queue.splice(index,1); if(index<queueIndex) queueIndex--; } showQueue(); updatePlayer(); }
+    else if(action==='queue-move-up' || action==='queue-move-down') { const index=Number(button.dataset.index); const target=index+(action==='queue-move-up'?-1:1); if(target>=0&&target<queue.length){[queue[index],queue[target]]=[queue[target],queue[index]];if(queueIndex===index)queueIndex=target;else if(queueIndex===target)queueIndex=index;showQueue();updatePlayer();} }
     else if(action==='queue-clear') { stopPlayback(); closeModal(); }
     else if(action==='export-backup') await exportBackup();
     else if(action==='import-backup') { closeModal(); $('#backupFileInput').click(); }
