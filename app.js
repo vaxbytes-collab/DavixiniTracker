@@ -381,7 +381,7 @@
           <h1>tu música.<br><span>tus reglas.</span></h1>
           <p class="home-hero-description">todo lo que has guardado, ordenado a tu manera. sin algoritmo y en una biblioteca compartida.</p>
           <div class="home-hero-actions"><button class="button button-primary" data-action="play-all-shuffle">${icon('shuffle')} escuchar algo</button><button class="button button-secondary" data-action="new-album">${icon('plus')} crear álbum</button></div>
-          <div class="home-hero-meta"><span><i></i> biblioteca local</span><span>${tracks.length} pistas</span><span>${albums.length} álbumes</span></div>
+          <div class="home-hero-meta"><span><i></i> ${cloudConfigured ? 'biblioteca compartida' : 'biblioteca local'}</span><span>${tracks.length} pistas</span><span>${albums.length} álbumes</span></div>
         </div>
         <div class="home-hero-art" aria-hidden="true"><div class="hero-orbit hero-orbit-one"></div><div class="hero-orbit hero-orbit-two"></div><div class="hero-record"><div class="hero-record-label">♫</div></div><span class="hero-note hero-note-one">♪</span><span class="hero-note hero-note-two">♫</span><span class="hero-art-caption">PLAY IT YOUR WAY</span></div>
       </section>${pageHeader('archivo personal','tu música','Álbumes, canciones y playlists de tu biblioteca compartida.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
@@ -626,8 +626,8 @@
     const total = tracks.reduce((sum,t)=>sum+(t.size||t.blob?.size||0),0);
     showModal('ajustes y copias','tu biblioteca', `<div class="settings-section"><h3>copia de seguridad</h3><p>exporta tus álbumes, portadas, playlists y archivos de audio en un único archivo JSON. puede ocupar bastante espacio.</p><div class="settings-actions"><button class="button button-primary" data-action="export-backup">${icon('download')} exportar biblioteca</button><button class="button button-secondary" data-action="import-backup">${icon('upload')} restaurar copia</button></div><p class="settings-note">tamaño aproximado de audio: ${formatBytes(total)}. guarda la copia en otro dispositivo o unidad.</p></div>
       <div class="settings-section"><h3>reproducción</h3><p>atajos: espacio reproduce o pausa, flechas cambian posición y volumen, F abre o cierra el reproductor y Ctrl/⌘ + K busca. también puedes cambiar la velocidad desde el reproductor a pantalla completa.</p><div class="settings-actions"><button class="button button-secondary" data-action="reset-player">restablecer volumen y reproducción</button></div></div>
-      <div class="settings-section"><h3>datos locales</h3><p>la biblioteca vive en el almacenamiento de este navegador. borrar sus datos puede eliminar canciones y portadas. los archivos no se envían a un servidor.</p><div class="settings-actions"><button class="button button-danger" data-action="clear-library">borrar biblioteca completa</button></div></div>
-      <div class="settings-section"><h3>acerca de</h3><p>davixiniTracker es una biblioteca local sin cuenta, publicidad, analítica ni servicios externos de música.</p><p class="settings-note">Los formatos reproducibles dependen del navegador y del sistema operativo.</p></div>`);
+      <div class="settings-section"><h3>datos y almacenamiento</h3><p>este navegador conserva una copia de trabajo. el catálogo compartido y sus archivos se publican en supabase cuando el administrador pulsa “publicar cambios”.</p><div class="settings-actions"><button class="button button-danger" data-action="clear-library">borrar biblioteca de este navegador</button></div></div>
+      <div class="settings-section"><h3>acerca de</h3><p>davixiniTracker no tiene publicidad ni analítica. supabase almacena la biblioteca compartida y controla quién puede modificarla.</p><p class="settings-note">Los formatos reproducibles dependen del navegador y del sistema operativo.</p></div>`);
   }
 
   function openFilePicker(albumId) {
