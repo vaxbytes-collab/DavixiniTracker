@@ -97,6 +97,7 @@
   const tracksForPlaylist = playlist => (playlist?.trackIds || []).map(getTrack).filter(Boolean);
   const albumForTrack = track => getAlbum(track?.albumId);
   const coverForTrack = track => albumForTrack(track)?.cover || track?.artwork || null;
+  const trackCoverMarkup = track => { const cover=coverForTrack(track); return `<span class="track-thumb">${cover ? `<img src="${cachedObjectUrl(cover)}" alt="">` : icon('musicNote')}</span>`; };
   const titleFromFile = name => String(name || 'sin título').replace(/\.[^.]+$/, '').replace(/[._]+/g, ' ').trim() || 'sin título';
 
   function toast(message, type = 'info') {
@@ -246,12 +247,11 @@
     const favoriteIcon = track.favorite ? 'heartFilled' : 'heart';
     const duration = track.duration ? formatTime(track.duration) : '—';
     const secondary = track.artist || album?.artist || 'artista desconocido';
-    const trackCover = coverForTrack(track);
     const sortable = Boolean(options.sortType);
     return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}" ${sortable ? `data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
       <span class="track-index">${sortable ? '<span class="track-drag-handle" draggable="true" data-drag-track="' + escapeHTML(track.id) + '" title="arrastrar para reordenar" aria-label="arrastra para reordenar">⠿</span>' : ''}<span>${isPlaying && !audio.paused ? '♫' : index + 1}</span></span>
       <button class="track-main" data-action="play-track" data-id="${escapeHTML(track.id)}" aria-label="Reproducir ${escapeHTML(track.title)}">
-        <span class="track-thumb">${trackCover ? `<img src="${cachedObjectUrl(trackCover)}" alt="">` : icon('musicNote')}</span>
+        ${trackCoverMarkup(track)}
         <span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(secondary)}</small></span>
       </button>
       <span class="track-album" title="${escapeHTML(album?.title || '')}">${escapeHTML(album?.title || 'sin álbum')}</span>
@@ -518,12 +518,12 @@
     const playlist = getPlaylist(playlistId);
     if (!playlist) return;
     const candidates = tracks.filter(t=>!(playlist.trackIds||[]).includes(t.id));
-    showModal(`añadir canciones`,playlist.name, `${candidates.length ? `<div class="modal-list">${candidates.map(track=>`<button class="modal-list-item" data-action="append-to-playlist" data-id="${escapeHTML(track.id)}" data-playlist="${escapeHTML(playlistId)}"><span class="track-thumb">${icon('musicNote')}</span><span><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(albumForTrack(track)?.title||track.fileName||'')}</small></span><span class="item-end">${icon('plus')}</span></button>`).join('')}</div>` : '<p class="form-hint">no hay más canciones por añadir.</p>'}<div class="modal-footer"><button class="button button-secondary" data-modal-close>cerrar</button></div>`, true);
+    showModal(`añadir canciones`,playlist.name, `${candidates.length ? `<div class="modal-list">${candidates.map(track=>`<button class="modal-list-item" data-action="append-to-playlist" data-id="${escapeHTML(track.id)}" data-playlist="${escapeHTML(playlistId)}">${trackCoverMarkup(track)}<span><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(albumForTrack(track)?.title||track.artist||'sin álbum')}</small></span><span class="item-end">${icon('plus')}</span></button>`).join('')}</div>` : '<p class="form-hint">no hay más canciones por añadir.</p>'}<div class="modal-footer"><button class="button button-secondary" data-modal-close>cerrar</button></div>`, true);
   }
 
   function showQueue() {
     const queuedTracks = queue.map((id,index)=>({track:getTrack(id),index})).filter(item=>item.track);
-    showModal('cola de reproducción',`${queuedTracks.length} canciones`, `${queuedTracks.length ? `<div class="modal-list">${queuedTracks.map(({track,index})=>`<div class="modal-list-item ${index===queueIndex?'queue-current':''}"><button class="track-main" data-action="queue-play" data-index="${index}" style="flex:1"><span class="track-thumb">${icon('musicNote')}</span><span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(albumForTrack(track)?.title||track.artist||'')}</small></span></button><button class="track-action" data-action="queue-remove" data-index="${index}" aria-label="Quitar de la cola">${icon('close')}</button></div>`).join('')}</div>` : '<p class="form-hint">la cola está vacía. reproduce un álbum o una playlist para llenarla.</p>'}<div class="modal-footer">${queuedTracks.length?'<button class="button button-danger" data-action="queue-clear">vaciar cola</button>':''}<button class="button button-secondary" data-modal-close>cerrar</button></div>`, true);
+    showModal('cola de reproducción',`${queuedTracks.length} canciones`, `${queuedTracks.length ? `<div class="modal-list">${queuedTracks.map(({track,index})=>`<div class="modal-list-item ${index===queueIndex?'queue-current':''}"><button class="track-main" data-action="queue-play" data-index="${index}" style="flex:1">${trackCoverMarkup(track)}<span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(albumForTrack(track)?.title||track.artist||'')}</small></span></button><button class="track-action" data-action="queue-remove" data-index="${index}" aria-label="Quitar de la cola">${icon('close')}</button></div>`).join('')}</div>` : '<p class="form-hint">la cola está vacía. reproduce un álbum o una playlist para llenarla.</p>'}<div class="modal-footer">${queuedTracks.length?'<button class="button button-danger" data-action="queue-clear">vaciar cola</button>':''}<button class="button button-secondary" data-modal-close>cerrar</button></div>`, true);
   }
 
   function settingsModal() {
@@ -715,15 +715,18 @@
       await transactionDone(tx);
       const wasCurrent = currentTrackId() === id;
       const wasPlaying = wasCurrent && !audio.paused;
+      if (wasCurrent) audio.pause();
+      // primero refresca el registro y después carga el audio nuevo: así el evento
+      // loadedmetadata nunca puede guardar por accidente el Blob anterior.
+      await refreshData();
       if (wasCurrent) {
-        audio.pause();
         if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
         currentObjectUrl = URL.createObjectURL(file);
         audio.src = currentObjectUrl;
         audio.load();
         if (wasPlaying) audio.play().catch(() => toast('archivo sustituido, pero el navegador no pudo reproducirlo.', 'error'));
       }
-      await refreshData(); closeModal(); render();
+      closeModal(); render();
       toast('archivo sustituido. se conservaron título, favoritos y playlists.');
     } catch (error) {
       toast(error?.name === 'QuotaExceededError' ? 'no hay espacio suficiente para guardar el nuevo archivo.' : 'no se pudo sustituir: ' + (error.message || 'error'), 'error');
