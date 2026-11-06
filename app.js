@@ -246,7 +246,7 @@
     const secondary = [track.artist || album?.artist || 'artista desconocido', track.fileName || ''].filter(Boolean).join(' · ');
     const sortable = Boolean(options.sortType);
     return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}" ${sortable ? `draggable="true" data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
-      <span class="track-index">${sortable ? '<span class="track-drag-handle" data-drag-track="' + escapeHTML(track.id) + '" title="arrastrar para reordenar" aria-label="arrastra para reordenar">⠿</span>' : ''}<span>${isPlaying && !audio.paused ? '♫' : index + 1}</span></span>
+      <span class="track-index">${sortable ? '<span class="track-drag-handle" draggable="true" data-drag-track="' + escapeHTML(track.id) + '" title="arrastrar para reordenar" aria-label="arrastra para reordenar">⠿</span>' : ''}<span>${isPlaying && !audio.paused ? '♫' : index + 1}</span></span>
       <button class="track-main" data-action="play-track" data-id="${escapeHTML(track.id)}" aria-label="Reproducir ${escapeHTML(track.title)}">
         <span class="track-thumb">${track.artwork ? `<img src="${cachedObjectUrl(track.artwork)}" alt="">` : icon('musicNote')}</span>
         <span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(secondary)}</small></span>
@@ -806,7 +806,7 @@
     catch(error) { toast(`no se pudo quitar: ${error.message}`,'error'); }
   }
 
-  async function reorderTrackInCollection(type, collectionId, trackId, targetTrackId) {
+  async function reorderTrackInCollection(type, collectionId, trackId, targetTrackId, insertBefore = true) {
     const collection = type === 'album' ? getAlbum(collectionId) : type === 'playlist' ? getPlaylist(collectionId) : null;
     if (!collection || trackId === targetTrackId) return;
     const ids = [...(type === 'album' ? collection.trackIds || [] : collection.trackIds || [])];
@@ -814,7 +814,9 @@
     const to = ids.indexOf(targetTrackId);
     if (from < 0 || to < 0) return;
     ids.splice(from, 1);
-    ids.splice(to, 0, trackId);
+    const targetAfterRemoval = ids.indexOf(targetTrackId);
+    if (targetAfterRemoval < 0) return;
+    ids.splice(targetAfterRemoval + (insertBefore ? 0 : 1), 0, trackId);
     try {
       const storeName = type === 'album' ? 'albums' : 'playlists';
       const tx = db.transaction(storeName, 'readwrite');
@@ -1129,7 +1131,9 @@
     const targetId = row?.dataset.trackRow;
     clearTrackDragState();
     if (row && row.dataset.sortType === type && row.dataset.sortId === collectionId && targetId) {
-      reorderTrackInCollection(type, collectionId, sourceId, targetId);
+      const rect = row.getBoundingClientRect();
+      const insertBefore = event.clientY < rect.top + rect.height / 2;
+      reorderTrackInCollection(type, collectionId, sourceId, targetId, insertBefore);
     }
   });
 
