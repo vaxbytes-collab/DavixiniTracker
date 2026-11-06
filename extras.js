@@ -2,8 +2,18 @@
   'use strict';
   const audio = document.getElementById('audioEngine');
   const dbName = 'MiMusicaBiblioteca';
-  let db, ctx, source, filters = [], compressor, sleepId = null, fadeOn = false;
-  let loopA = null, loopB = null, loopOn = false, fadeId = null;
+  let db, ctx, source, filters = [], compressor, sleepId = null;
+  let loopA = null, loopB = null, loopOn = false;
+  const crossfadeSettings = {
+    enabled: localStorage.getItem('davixini-crossfade-enabled') !== 'false',
+    duration: Math.min(12, Math.max(2, Number(localStorage.getItem('davixini-crossfade-duration')) || 6))
+  };
+  const nextAudio = new Audio();
+  nextAudio.preload = 'auto';
+  nextAudio.volume = 0;
+  let prepared = null, preparedUrl = null, fading = false, committing = false;
+  let fadeTimer = null, fadeStartedAt = 0;
+  let masterVolume = Math.min(1, Math.max(0, Number(localStorage.getItem('mi-musica-volume') ?? 0.8)));
   const $ = (s, r=document) => r.querySelector(s);
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const toast = s => { const region=$('#toastRegion'); if(!region)return; const el=document.createElement('div');el.className='toast';el.textContent=s;region.append(el);setTimeout(()=>el.remove(),3000); };
@@ -20,7 +30,7 @@
     '<button class="feature-tile" data-extra="stats"><strong>▥ estadísticas</strong><small>tiempo de escucha de esta sesión</small></button>'+
     '<button class="feature-tile" data-extra="dupes"><strong>◎ duplicados</strong><small>encuentra títulos repetidos</small></button>'+
     '<button class="feature-tile" data-extra="timer"><strong>◷ temporizador</strong><small>detén la música en X minutos</small></button>'+
-    '<button class="feature-tile" data-extra="fade"><strong>⇄ fundido suave</strong><small>suaviza el final de cada pista</small></button>'+
+    '<button class="feature-tile" data-extra="crossfade"><strong>⇄ crossfade real</strong><small>solapa el final y el inicio de dos canciones</small></button>'+
     '<button class="feature-tile" data-extra="normalize"><strong>↗ nivelador</strong><small>compresión dinámica de volumen</small></button>'+
     '<button class="feature-tile" data-extra="ab"><strong>A—B bucle</strong><small>repite una parte de la canción</small></button>'+
     '<button class="feature-tile" data-extra="filters"><strong>⌕ filtros</strong><small>busca por artista, género y año</small></button>'+
@@ -32,17 +42,143 @@
   async function stats(){const n=Number(sessionStorage.getItem('dt-extra-play-seconds')||0),plays=Number(sessionStorage.getItem('dt-extra-plays')||0);const ts=await allTracks();modal('estadísticas','esta sesión de escucha','<div class="stats-row"><div class="stat-card"><strong>'+plays+'</strong><span>pistas iniciadas</span></div><div class="stat-card"><strong>'+Math.floor(n/60)+' min</strong><span>tiempo escuchado</span></div><div class="stat-card"><strong>'+ts.length+'</strong><span>pistas en biblioteca</span></div></div><p class="form-hint">el contador de sesión empieza desde que abres esta pestaña.</p>');}
   async function dupes(){const ts=await allTracks(),m=new Map();ts.forEach(t=>{const k=(t.title||'').trim().toLowerCase()+'|'+(t.artist||'').trim().toLowerCase();if(!m.has(k))m.set(k,[]);m.get(k).push(t);});const groups=[...m.values()].filter(g=>g.length>1);modal('detector de duplicados',groups.length+' grupos','<div class="modal-list">'+(groups.length?groups.map(g=>'<div class="modal-list-item"><span><strong>'+esc(g[0].title)+'</strong><small>'+esc(g[0].artist||'artista desconocido')+'</small></span><b>'+g.length+' copias</b></div>').join(''):'<p class="form-hint">no hay duplicados por título y artista.</p>')+'</div><p class="form-hint">solo detecta coincidencias; nunca borra archivos.</p>');}
   function timer(){const v=prompt('¿en cuántos minutos? (5 a 240)');const n=Number(v);if(v===null)return;if(!Number.isInteger(n)||n<5||n>240){toast('elige entre 5 y 240 minutos.');return;}clearTimeout(sleepId);sleepId=setTimeout(()=>{audio.pause();toast('temporizador terminado.');},n*60000);toast('temporizador activado: '+n+' min.');}
-  function fade(){fadeOn=!fadeOn;toast(fadeOn?'fundido suave activado.':'fundido suave desactivado.');}
+  function showCrossfadeSettings(){
+    modal('crossfade real','mezcla dos canciones durante la transición',
+      '<div class="form-field"><label><input id="crossfadeEnabled" type="checkbox" '+(crossfadeSettings.enabled?'checked':'')+'> activar crossfade automático</label><p class="form-hint">la canción que termina baja de volumen mientras la siguiente empieza y sube. ambas suenan al mismo tiempo.</p></div>'+
+      '<div class="form-field"><label for="crossfadeDuration">duración de la mezcla: <strong id="crossfadeDurationValue">'+crossfadeSettings.duration+' segundos</strong></label><input id="crossfadeDuration" type="range" min="2" max="12" step="1" value="'+crossfadeSettings.duration+'"><p class="form-hint">se prepara la siguiente canción antes de que termine la actual.</p></div>'+
+      '<div class="modal-footer"><button class="button button-primary" data-extra="close">listo</button></div>');
+  }
+  function discardPrepared(revoke = true){
+    nextAudio.pause();
+    nextAudio.removeAttribute('src');
+    nextAudio.load();
+    if(revoke && preparedUrl) URL.revokeObjectURL(preparedUrl);
+    preparedUrl = null;
+    prepared = null;
+  }
+  function cancelCrossfade(){
+    if(committing) return;
+    if(fadeTimer){clearInterval(fadeTimer);fadeTimer=null;}
+    fading = false;
+    window.__davixiniCrossfadeActive = false;
+    discardPrepared(true);
+    audio.volume = masterVolume;
+  }
+  function prepareNext(){
+    if(committing || !crossfadeSettings.enabled || !audio.src || audio.paused || !window.DavixiniPlayback) return;
+    const currentId = window.__davixiniCurrentTrackId || null;
+    if(prepared && prepared.currentId === currentId) return;
+    discardPrepared(true);
+    const next = window.DavixiniPlayback.getNextForCrossfade();
+    if(!next) return;
+    prepared = {id:next.id,index:next.index,currentId};
+    preparedUrl = URL.createObjectURL(next.blob);
+    nextAudio.volume = 0;
+    nextAudio.src = preparedUrl;
+    nextAudio.load();
+  }
+  async function startCrossfade(){
+    if(fading || committing || !prepared || !crossfadeSettings.enabled || audio.paused) return;
+    if(nextAudio.readyState < 2) return;
+    const plan = prepared;
+    nextAudio.currentTime = 0;
+    nextAudio.volume = 0;
+    try {
+      await nextAudio.play();
+    } catch(error) {
+      toast('el navegador bloqueó la segunda pista; se reproducirá el cambio normal.');
+      discardPrepared(true);
+      return;
+    }
+    if(!prepared || prepared.id !== plan.id) { nextAudio.pause(); return; }
+    fading = true;
+    window.__davixiniCrossfadeActive = true;
+    fadeStartedAt = performance.now();
+    fadeTimer = setInterval(updateCrossfade, 40);
+  }
+  function updateCrossfade(){
+    if(!fading || committing) return;
+    const progress = Math.min(1, (performance.now() - fadeStartedAt) / (crossfadeSettings.duration * 1000));
+    audio.volume = masterVolume * (1 - progress);
+    nextAudio.volume = masterVolume * progress;
+    if(progress >= 1) finishCrossfade();
+  }
+  async function finishCrossfade(){
+    if(!fading || committing || !prepared || !preparedUrl) return;
+    committing = true;
+    if(fadeTimer){clearInterval(fadeTimer);fadeTimer=null;}
+    const plan = prepared;
+    const url = preparedUrl;
+    const resumeAt = nextAudio.currentTime;
+    const targetVolume = masterVolume;
+    try {
+      await window.DavixiniPlayback.commitCrossfade(plan.index,plan.id,url,resumeAt,targetVolume);
+      nextAudio.pause();
+      nextAudio.removeAttribute('src');
+      nextAudio.load();
+      prepared = null;
+      preparedUrl = null;
+      fading = false;
+      window.__davixiniCrossfadeActive = false;
+      committing = false;
+      prepareNext();
+    } catch(error) {
+      nextAudio.pause();
+      discardPrepared(true);
+      fading = false;
+      window.__davixiniCrossfadeActive = false;
+      committing = false;
+      audio.volume = masterVolume;
+      toast('no se pudo completar el crossfade: ' + (error.message || 'error'));
+    }
+  }
+  function maybeStartCrossfade(){
+    if(!crossfadeSettings.enabled || !prepared || fading || committing || audio.paused || !Number.isFinite(audio.duration)) return;
+    const remaining = audio.duration - audio.currentTime;
+    if(remaining <= crossfadeSettings.duration && remaining > 0.05 && nextAudio.readyState >= 2) startCrossfade();
+  }
+  function setMasterVolume(value){
+    masterVolume = Math.min(1,Math.max(0,Number(value)||0));
+    if(!fading && !committing) audio.volume = masterVolume;
+  }
+  window.DavixiniCrossfade = {cancel:cancelCrossfade,setMasterVolume};
   function normalize(){try{graph();ctx.resume();const on=compressor.ratio.value===1;compressor.threshold.value=on?-16:0;compressor.ratio.value=on?3:1;toast(on?'nivelador dinámico activado.':'nivelador desactivado.');}catch(e){toast(e.message);}}
   function ab(){if(!audio.src){toast('reproduce una canción primero.');return;}if(loopA===null||loopB!==null){loopA=audio.currentTime;loopB=null;loopOn=false;toast('punto A marcado. vuelve a pulsar para marcar B.');}else{loopB=audio.currentTime;if(loopB<=loopA){loopB=null;toast('B debe ir después de A.');return;}loopOn=true;toast('bucle A—B activado. vuelve a pulsar para reiniciar.');}}
   async function filtersTool(){const ts=await allTracks();modal('filtros avanzados','artista · género · año','<form id="extraFilterForm"><div class="form-grid"><div class="form-field full"><label>artista contiene</label><input id="fa"></div><div class="form-field"><label>género contiene</label><input id="fg"></div><div class="form-field"><label>año</label><input id="fy"></div></div><div class="modal-footer"><button type="button" class="button button-secondary" data-extra="close">cancelar</button><button class="button button-primary">filtrar</button></div></form><div id="extraFilterResults"></div>');}
   document.addEventListener('click',async e=>{const b=e.target.closest('[data-extra]');if(!b)return;const a=b.dataset.extra;
-    if(a==='open')hub();else if(a==='eq')eq();else if(a==='lyrics'||a==='notes')await lyrics();else if(a==='stats')await stats();else if(a==='dupes')await dupes();else if(a==='timer')timer();else if(a==='fade')fade();else if(a==='normalize')normalize();else if(a==='ab')ab();else if(a==='filters')await filtersTool();else if(a==='reset'){loopA=loopB=null;loopOn=false;fadeOn=false;clearTimeout(sleepId);if(compressor){compressor.ratio.value=1;compressor.threshold.value=0;}filters.forEach(f=>f.gain.value=0);toast('extras restablecidos.');}else if(a==='flat'){filters.forEach((f,i)=>{f.gain.value=0;const el=$('[data-eq="'+i+'"]');if(el)el.value=0;$('#eqout'+i).textContent='0 db';});}else if(a==='close')close();
+    if(a==='open')hub();else if(a==='eq')eq();else if(a==='lyrics'||a==='notes')await lyrics();else if(a==='stats')await stats();else if(a==='dupes')await dupes();else if(a==='timer')timer();else if(a==='crossfade')showCrossfadeSettings();else if(a==='normalize')normalize();else if(a==='ab')ab();else if(a==='filters')await filtersTool();else if(a==='reset'){loopA=loopB=null;loopOn=false;cancelCrossfade();clearTimeout(sleepId);if(compressor){compressor.ratio.value=1;compressor.threshold.value=0;}filters.forEach(f=>f.gain.value=0);toast('extras restablecidos.');}else if(a==='flat'){filters.forEach((f,i)=>{f.gain.value=0;const el=$('[data-eq="'+i+'"]');if(el)el.value=0;$('#eqout'+i).textContent='0 db';});}else if(a==='close')close();
   });
-  document.addEventListener('input',e=>{const el=e.target.closest('[data-eq]');if(el&&filters[Number(el.dataset.eq)]){filters[Number(el.dataset.eq)].gain.value=Number(el.value);$('#eqout'+el.dataset.eq).textContent=el.value+' db';}});
+  document.addEventListener('input',e=>{
+    const el=e.target.closest('[data-eq]');
+    if(el&&filters[Number(el.dataset.eq)]){filters[Number(el.dataset.eq)].gain.value=Number(el.value);$('#eqout'+el.dataset.eq).textContent=el.value+' db';}
+    if(e.target.id==='crossfadeDuration'){crossfadeSettings.duration=Number(e.target.value);$('#crossfadeDurationValue').textContent=crossfadeSettings.duration+' segundos';localStorage.setItem('davixini-crossfade-duration',String(crossfadeSettings.duration));}
+  });
+  document.addEventListener('change',e=>{
+    if(e.target.id==='crossfadeEnabled'){
+      crossfadeSettings.enabled=e.target.checked;
+      localStorage.setItem('davixini-crossfade-enabled',String(crossfadeSettings.enabled));
+      if(crossfadeSettings.enabled) prepareNext(); else cancelCrossfade();
+      toast(crossfadeSettings.enabled?'crossfade activado.':'crossfade desactivado.');
+    }
+  });
   document.addEventListener('submit',async e=>{if(e.target.id==='extraTrackForm'){e.preventDefault();await saveTrack(e.target.dataset.id,{lyrics:$('#extraLyrics').value,notes:$('#extraNotes').value});close();toast('letras y notas guardadas.');}if(e.target.id==='extraFilterForm'){e.preventDefault();const ts=await allTracks(),a=$('#fa').value.toLowerCase(),g=$('#fg').value.toLowerCase(),y=$('#fy').value;const found=ts.filter(t=>(!a||(t.artist||'').toLowerCase().includes(a))&&(!g||(t.genre||'').toLowerCase().includes(g))&&(!y||String(t.year||'')===y));$('#extraFilterResults').innerHTML='<p class="form-hint">'+found.length+' resultados</p>'+found.map(t=>'<p>'+esc(t.title)+' — '+esc(t.artist)+'</p>').join('');}});
   audio.addEventListener('play',()=>{sessionStorage.setItem('dt-extra-plays',String(Number(sessionStorage.getItem('dt-extra-plays')||0)+1));});
-  audio.addEventListener('timeupdate',()=>{if(!audio.paused){const sec=Math.floor(audio.currentTime);const prev=Number(sessionStorage.getItem('dt-extra-last-second')||-1);if(sec>prev){sessionStorage.setItem('dt-extra-play-seconds',String(Number(sessionStorage.getItem('dt-extra-play-seconds')||0)+(sec-prev)));sessionStorage.setItem('dt-extra-last-second',String(sec));}}if(loopOn&&loopB!==null&&audio.currentTime>=loopB)audio.currentTime=loopA;if(fadeOn&&audio.duration-audio.currentTime<=3&&!fadeId){const base=audio.volume;let i=0;fadeId=setInterval(()=>{i++;audio.volume=base*Math.max(0,1-i/15);if(i>=15){clearInterval(fadeId);fadeId=null;}},200);}});
-  audio.addEventListener('ended',()=>{if(fadeOn)audio.volume=Number(localStorage.getItem('mi-musica-volume')||.8);});
+  audio.addEventListener('timeupdate',()=>{
+    if(!audio.paused){
+      const sec=Math.floor(audio.currentTime);
+      const prev=Number(sessionStorage.getItem('dt-extra-last-second')||-1);
+      if(sec>prev){
+        sessionStorage.setItem('dt-extra-play-seconds',String(Number(sessionStorage.getItem('dt-extra-play-seconds')||0)+(sec-prev)));
+        sessionStorage.setItem('dt-extra-last-second',String(sec));
+      }
+    }
+    if(loopOn&&loopB!==null&&audio.currentTime>=loopB)audio.currentTime=loopA;
+    maybeStartCrossfade();
+  });
+  audio.addEventListener('play',prepareNext);
+  audio.addEventListener('loadedmetadata',prepareNext);
+  nextAudio.addEventListener('canplay',maybeStartCrossfade);
+  audio.addEventListener('ended',()=>{if(fading)finishCrossfade();});
+  audio.addEventListener('pause',()=>{if(fading&&!committing)cancelCrossfade();});
   document.addEventListener('DOMContentLoaded',()=>{const button=document.createElement('button');button.className='nav-item settings-link';button.id='extraToolsButton';button.innerHTML='<span class="nav-icon">✦</span><span>centro de extras</span>';button.addEventListener('click',hub);const settings=$('#settingsButton');if(settings)settings.parentNode.insertBefore(button,settings);});
 })();
