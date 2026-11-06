@@ -1117,8 +1117,12 @@
     if (!row || row.dataset.sortType !== draggedSortType || row.dataset.sortId !== draggedSortId) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    $$('.track-row.drop-target', root).forEach(item => item.classList.remove('drop-target'));
-    if (row.dataset.trackRow !== draggedTrackId) row.classList.add('drop-target');
+    $('.track-row.drop-target', root).forEach(item => item.classList.remove('drop-target','drop-target-after'));
+    if (row.dataset.trackRow !== draggedTrackId) {
+      const rect = row.getBoundingClientRect();
+      row.classList.add('drop-target');
+      row.classList.toggle('drop-target-after', event.clientY >= rect.top + rect.height / 2);
+    }
   });
 
   root.addEventListener('drop', event => {
@@ -1143,7 +1147,7 @@
     draggedTrackId = null;
     draggedSortType = null;
     draggedSortId = null;
-    $$('.track-row.dragging-row, .track-row.drop-target', root).forEach(row => row.classList.remove('dragging-row','drop-target'));
+    $$('.track-row.dragging-row, .track-row.drop-target', root).forEach(row => row.classList.remove('dragging-row','drop-target','drop-target-after'));
   }
 
   root.addEventListener('dragover',event=>{
