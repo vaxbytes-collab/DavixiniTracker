@@ -961,6 +961,7 @@
   }
 
   function playCurrent() {
+    window.DavixiniCrossfade?.cancel();
     const track=getTrack(queue[queueIndex]);
     window.__davixiniCurrentTrackId = track?.id || null;
     if(!track?.blob) { toast('el archivo ya no está disponible.','error'); return; }
@@ -975,12 +976,14 @@
   }
 
   function stopPlayback() {
+    window.DavixiniCrossfade?.cancel();
     audio.pause(); audio.removeAttribute('src'); audio.load();
     if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl=null; queue=[]; queueIndex=-1; window.__davixiniCurrentTrackId=null; updatePlayer();
   }
 
   function nextTrack(direction=1) {
+    window.DavixiniCrossfade?.cancel();
     if(!queue.length) return;
     if(shuffle && direction>0 && queue.length>1) {
       let next=queueIndex; while(next===queueIndex) next=Math.floor(Math.random()*queue.length); queueIndex=next;
@@ -992,6 +995,87 @@
     }
     playCurrent();
   }
+
+  // API pequeño para que el segundo reproductor pueda consultar y confirmar
+  // la siguiente pista sin romper la cola ni los controles existentes.
+  window.DavixiniPlayback = {
+    getNextForCrossfade() {
+      if(!queue.length || queueIndex<0) return null;
+      let index;
+      if(repeatMode==='one') index=queueIndex;
+      else if(shuffle && queue.length>1) {
+        index=queueIndex;
+        while(index===queueIndex) index=Math.floor(Math.random()*queue.length);
+      } else {
+        index=queueIndex+1;
+        if(index>=queue.length) {
+          if(repeatMode==='all') index=0;
+          else return null;
+        }
+      }
+      const track=getTrack(queue[index]);
+      if(!track?.blob) return null;
+      return {index,id:track.id,blob:track.blob};
+    },
+    async commitCrossfade(index,id,url,resumeTime,volume) {
+      if(queue[index]!==id || !getTrack(id)?.blob) throw new Error('la cola cambió durante la transición.');
+      const previousUrl=currentObjectUrl;
+      const previousTime=audio.currentTime;
+      const previousIndex=queueIndex;
+      const previousId=window.__davixiniCurrentTrackId;
+      const waitForMetadata=()=>new Promise((resolve,reject)=>{
+        if(audio.readyState>=1 && Number.isFinite(audio.duration)) return resolve();
+        const onReady=()=>{cleanup();resolve();};
+        const onError=()=>{cleanup();reject(new Error('no se pudo cargar la siguiente canción.'));};
+        const cleanup=()=>{audio.removeEventListener('loadedmetadata',onReady);audio.removeEventListener('error',onError);clearTimeout(timer);};
+        const timer=setTimeout(()=>{cleanup();reject(new Error('la siguiente canción tardó demasiado en cargar.'));},10000);
+        audio.addEventListener('loadedmetadata',onReady,{once:true});
+        audio.addEventListener('error',onError,{once:true});
+      });
+      try {
+        audio.pause();
+        queueIndex=index;
+        window.__davixiniCurrentTrackId=id;
+        currentObjectUrl=url;
+        audio.src=url;
+        audio.playbackRate=playbackRate;
+        audio.load();
+        await waitForMetadata();
+        if(Number.isFinite(audio.duration) && audio.duration>0) {
+          audio.currentTime=Math.min(Math.max(0,Number(resumeTime)||0),Math.max(0,audio.duration-0.05));
+        }
+        audio.volume=Math.min(1,Math.max(0,Number(volume)||0));
+        const track=getTrack(id);
+        if(track) {
+          const tx=db.transaction('tracks','readwrite');
+          tx.objectStore('tracks').put({...track,lastPlayedAt:Date.now()});
+          tx.oncomplete=()=>refreshData().catch(()=>{});
+        }
+        updatePlayer();
+        await audio.play();
+        if(previousUrl && previousUrl!==url) URL.revokeObjectURL(previousUrl);
+        updatePlayer();
+        return true;
+      } catch(error) {
+        audio.pause();
+        queueIndex=previousIndex;
+        window.__davixiniCurrentTrackId=previousId;
+        currentObjectUrl=previousUrl;
+        if(previousUrl) {
+          audio.src=previousUrl;
+          audio.load();
+          try {
+            await waitForMetadata();
+            if(Number.isFinite(audio.duration)) audio.currentTime=Math.min(previousTime,Math.max(0,audio.duration-0.05));
+            audio.volume=Math.min(1,Math.max(0,Number(volume)||0));
+            await audio.play();
+          } catch(_) {}
+        }
+        updatePlayer();
+        throw error;
+      }
+    }
+  };
 
   function updatePlayer() {
     const id=currentTrackId();
@@ -1386,7 +1470,13 @@
   $('#fullPlayerQueue').addEventListener('click',()=>{setFullPlayerVisible(false);showQueue();});
   $('#seekBar').addEventListener('input',event=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=audio.duration*Number(event.target.value)/1000;});
   $('#fullPlayerSeekBar').addEventListener('input',event=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=audio.duration*Number(event.target.value)/1000;});
-  const syncVolume=value=>{audio.volume=Number(value);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;localStorage.setItem('mi-musica-volume',String(audio.volume));};
+  const syncVolume=value=>{
+    const volume=Math.min(1,Math.max(0,Number(value)||0));
+    if(window.DavixiniCrossfade?.setMasterVolume) window.DavixiniCrossfade.setMasterVolume(volume);
+    else audio.volume=volume;
+    $('#volumeBar').value=volume;$('#fullPlayerVolume').value=volume;
+    localStorage.setItem('mi-musica-volume',String(volume));
+  };
   $('#volumeBar').addEventListener('input',event=>syncVolume(event.target.value));
   $('#fullPlayerVolume').addEventListener('input',event=>syncVolume(event.target.value));
   $('#fullPlayerSpeed').addEventListener('change',event=>{ const next=Number(event.target.value); if(!Number.isFinite(next)||next<0.5||next>2)return; playbackRate=next; audio.playbackRate=next; localStorage.setItem('mi-musica-speed',String(next)); updatePlayer(); });
@@ -1411,6 +1501,7 @@
     }
   });
   audio.addEventListener('ended',()=>{
+    if(window.__davixiniCrossfadeActive) return;
     if(repeatMode==='one'){audio.currentTime=0;audio.play().catch(()=>{});}else nextTrack(1);
   });
   audio.addEventListener('error',()=>{if(audio.src)toast('el navegador no puede reproducir este archivo.','error');});
