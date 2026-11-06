@@ -82,6 +82,7 @@
     if(nextAudio.readyState < 2) return;
     const plan = prepared;
     nextAudio.currentTime = 0;
+    nextAudio.playbackRate = audio.playbackRate;
     nextAudio.volume = 0;
     try {
       await nextAudio.play();
@@ -111,7 +112,9 @@
     if(fadeTimer){clearInterval(fadeTimer);fadeTimer=null;}
     const plan = prepared;
     const url = preparedUrl;
+    // Congela la pista entrante en el instante exacto en que termina la mezcla.
     const resumeAt = nextAudio.currentTime;
+    nextAudio.pause();
     const targetVolume = masterVolume;
     nextAudio.volume = targetVolume;
     try {
