@@ -30,10 +30,6 @@
     const { data, error } = await client.auth.getSession();
     if (error) throw error;
     if (data.session) await checkAdmin();
-    client.auth.onAuthStateChange((_event, session) => {
-      if (!session) admin = false;
-      else checkAdmin().catch(() => { admin = false; });
-    });
     return { configured: true, admin };
   }
 
