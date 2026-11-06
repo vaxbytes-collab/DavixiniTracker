@@ -66,6 +66,7 @@
   let queueIndex = -1;
   let shuffle = false;
   let repeatMode = 'off'; // off | all | one
+  let playbackRate = 1;
   let pendingCover = null;
   let pendingCoverUrl = null;
   let removePendingCover = false;
@@ -870,6 +871,7 @@
     if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl=URL.createObjectURL(track.blob);
     audio.src=currentObjectUrl;
+    audio.playbackRate=playbackRate;
     audio.play().then(()=>updatePlayer()).catch(()=>toast('el navegador no pudo reproducir este formato.','error'));
     const updated={...track,lastPlayedAt:Date.now()};
     const tx=db.transaction('tracks','readwrite'); tx.objectStore('tracks').put(updated); tx.oncomplete=()=>{refreshData().catch(()=>{});};
@@ -941,6 +943,7 @@
     $('#fullPlayerTotal').textContent=formatTime(audio.duration||track?.duration||0);
     $('#fullPlayerSeekBar').value=Number.isFinite(audio.duration)&&audio.duration>0?audio.currentTime/audio.duration*1000:0;
     $('#fullPlayerVolume').value=audio.volume;
+    $('#fullPlayerSpeed').value=String(playbackRate);
     $('#fullPlayerQueue').disabled=!queue.length;
     $('#fullPlayerShuffle').disabled=!track;
     $('#fullPlayerRepeat').disabled=!track;
@@ -950,12 +953,34 @@
   function setFullPlayerVisible(visible) {
     const panel=$('#fullPlayer');
     if(visible&&!currentTrackId()) { toast('primero reproduce una canción para abrir el reproductor.'); return; }
-    panel.hidden=!visible;
-    panel.setAttribute('aria-hidden',String(!visible));
-    document.body.classList.toggle('full-player-open',visible);
-    if(visible) { updatePlayer(); $('#fullPlayerClose').focus(); }
-    else $('#expandPlayerButton').focus();
+    if(visible) {
+      panel.hidden=false;
+      panel.setAttribute('aria-hidden','false');
+      document.body.classList.add('full-player-open');
+      updatePlayer();
+      $('#fullPlayerClose').focus();
+      if(typeof panel.requestFullscreen==='function' && !document.fullscreenElement) {
+        try { const request=panel.requestFullscreen({navigationUI:'hide'}); if(request&&typeof request.catch==='function') request.catch(()=>{}); }
+        catch (_) { /* el panel sigue ocupando el viewport */ }
+      }
+    } else {
+      panel.hidden=true;
+      panel.setAttribute('aria-hidden','true');
+      document.body.classList.remove('full-player-open');
+      if(document.fullscreenElement===panel && document.exitFullscreen) { const exit=document.exitFullscreen(); if(exit&&typeof exit.catch==='function') exit.catch(()=>{}); }
+      $('#expandPlayerButton').focus();
+    }
   }
+
+  document.addEventListener('fullscreenchange',()=>{
+    const panel=$('#fullPlayer');
+    if(document.fullscreenElement!==panel && !panel.hidden) {
+      panel.hidden=true;
+      panel.setAttribute('aria-hidden','true');
+      document.body.classList.remove('full-player-open');
+      $('#expandPlayerButton').focus();
+    }
+  });
 
   async function toggleCurrentFavorite() { const id=currentTrackId(); if(id) await toggleFavorite(id); }
 
@@ -1229,6 +1254,8 @@
   const syncVolume=value=>{audio.volume=Number(value);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;localStorage.setItem('mi-musica-volume',String(audio.volume));};
   $('#volumeBar').addEventListener('input',event=>syncVolume(event.target.value));
   $('#fullPlayerVolume').addEventListener('input',event=>syncVolume(event.target.value));
+  $('#fullPlayerSpeed').addEventListener('change',event=>{ const next=Number(event.target.value); if(!Number.isFinite(next)||next<0.5||next>2)return; playbackRate=next; audio.playbackRate=next; localStorage.setItem('mi-musica-speed',String(next)); updatePlayer(); });
+  audio.addEventListener('ratechange',updatePlayer);
   audio.addEventListener('play',updatePlayer);
   audio.addEventListener('pause',updatePlayer);
   audio.addEventListener('loadedmetadata',async()=>{
@@ -1284,6 +1311,9 @@
       const savedVolume=localStorage.getItem('mi-musica-volume');
       const volume=savedVolume===null?NaN:Number(savedVolume);
       if(Number.isFinite(volume)){audio.volume=Math.min(1,Math.max(0,volume));$('#volumeBar').value=audio.volume;}else audio.volume=.8;
+      const savedSpeed=Number(localStorage.getItem('mi-musica-speed')||1);
+      playbackRate=Number.isFinite(savedSpeed)&&savedSpeed>=0.5&&savedSpeed<=2?savedSpeed:1;
+      audio.playbackRate=playbackRate;
       render();
       if(navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
       if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('./sw.js').catch(()=>{});
