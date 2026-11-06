@@ -215,10 +215,34 @@
     </form>`);
   }
 
+  async function mergeLocalLibrary(snapshot) {
+    const albumMap = new Map(albums.map(item => [item.id, item]));
+    for (const remote of snapshot.albums || []) {
+      const local = albumMap.get(remote.id);
+      albumMap.set(remote.id, local
+        ? { ...local, ...remote, trackIds: [...new Set([...(remote.trackIds || []), ...(local.trackIds || [])])] }
+        : remote);
+    }
+    const trackMap = new Map(tracks.map(item => [item.id, item]));
+    for (const remote of snapshot.tracks || []) trackMap.set(remote.id, remote);
+    const playlistMap = new Map(playlists.map(item => [item.id, item]));
+    for (const remote of snapshot.playlists || []) {
+      const local = playlistMap.get(remote.id);
+      playlistMap.set(remote.id, local
+        ? { ...local, ...remote, trackIds: [...new Set([...(remote.trackIds || []), ...(local.trackIds || [])])] }
+        : remote);
+    }
+    await replaceLocalLibrary({
+      albums: [...albumMap.values()],
+      tracks: [...trackMap.values()],
+      playlists: [...playlistMap.values()]
+    });
+  }
+
   async function refreshPublishedLibrary() {
     const snapshot = await window.DavixiniCloud.loadLibrary();
     const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length;
-    if (hasRemote) await replaceLocalLibrary(snapshot);
+    if (hasRemote) await mergeLocalLibrary(snapshot);
     return Boolean(hasRemote);
   }
 
@@ -1422,8 +1446,12 @@
           const snapshot = await window.DavixiniCloud.loadLibrary();
           const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length;
           if (hasRemote) {
-            if (!cloudAdmin || !tracks.length || confirm('hay una biblioteca publicada en supabase. ¿cargar esa versión en este navegador?')) {
-              await replaceLocalLibrary(snapshot);
+            if (cloudAdmin) {
+              if (!tracks.length || confirm('hay una biblioteca publicada en supabase. ¿cargar esa versión en este navegador?')) {
+                await replaceLocalLibrary(snapshot);
+              }
+            } else {
+              await mergeLocalLibrary(snapshot);
             }
           }
           updateCloudControls();
