@@ -625,3 +625,26 @@ body.full-player-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .full-player-backdrop, .full-player.is-playing .full-player-art, .full-player.is-playing .full-player-visualizer i { animation: none !important; }
 }
+
+
+/* las carátulas también se mantienen visibles en listas compactas y móviles */
+.track-table.compact .track-thumb {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-basis: 32px;
+}
+@media (max-width: 700px) {
+  .track-row .track-thumb {
+    display: grid;
+    width: 29px;
+    height: 29px;
+    flex-basis: 29px;
+  }
+  .track-row .track-main { gap: 7px; }
+  .track-table.compact .track-thumb {
+    width: 29px;
+    height: 29px;
+    flex-basis: 29px;
+  }
+}
