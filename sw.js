@@ -1,4 +1,4 @@
-const CACHE_NAME = 'davixini-tracker-shell-v7';
+const CACHE_NAME = 'davixini-tracker-shell-v8';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './supabase-config.js', './supabase-cloud.js', './manifest.webmanifest', './icon.svg'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
