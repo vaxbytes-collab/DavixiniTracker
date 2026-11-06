@@ -491,3 +491,33 @@ input[type="range"] { accent-color: #db4a98; }
   .mobile-nav-item small { font-size: 7px; }
   .artist-grid, .genre-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
+
+
+/* ordenar pistas */
+.track-row[draggable="true"] { transition: background .14s, opacity .14s, transform .14s; }
+.track-index { display: flex; align-items: center; justify-content: center; gap: 3px; }
+.track-drag-handle {
+  display: inline-grid; place-items: center;
+  flex: 0 0 13px; width: 13px; height: 25px;
+  color: var(--subtle); font-size: 17px; line-height: 1;
+  cursor: grab; user-select: none; -webkit-user-select: none;
+  touch-action: none; border-radius: 4px;
+}
+.track-drag-handle:hover { color: #ff7189; background: var(--gradient-soft); }
+.track-drag-handle:active { cursor: grabbing; }
+.track-row.dragging-row { opacity: .36; background: var(--gradient-soft); }
+.track-row.drop-target { position: relative; background: linear-gradient(90deg, rgba(255,70,95,.13), rgba(134,87,255,.11)); }
+.track-row.drop-target::before {
+  content: ""; position: absolute; z-index: 2; left: 5px; right: 5px; top: -2px;
+  height: 3px; border-radius: 4px; background: var(--gradient);
+  box-shadow: 0 0 13px rgba(199,53,143,.5);
+}
+.track-table[data-sort-type="album"], .track-table[data-sort-type="playlist"] { position: relative; }
+.track-table[data-sort-type="album"] .track-row:hover .track-drag-handle,
+.track-table[data-sort-type="playlist"] .track-row:hover .track-drag-handle { color: #ff7189; }
+.sort-hint { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
+.sort-hint .sort-symbol { color: #ff7189; font-size: 15px; }
+@media (max-width: 700px) {
+  .track-drag-handle { color: #ff7189; min-width: 15px; }
+  .track-row.drop-target::before { left: 0; right: 0; }
+}
