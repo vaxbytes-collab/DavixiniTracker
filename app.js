@@ -355,12 +355,12 @@
         <div class="home-hero-copy">
           <p class="home-hero-eyebrow">DAVIXINITRACKER <span>·</span> TU ARCHIVO PERSONAL</p>
           <h1>tu música.<br><span>tus reglas.</span></h1>
-          <p class="home-hero-description">todo lo que has guardado, ordenado a tu manera. sin algoritmo y sin salir de tu navegador.</p>
+          <p class="home-hero-description">todo lo que has guardado, ordenado a tu manera. sin algoritmo y en una biblioteca compartida.</p>
           <div class="home-hero-actions"><button class="button button-primary" data-action="play-all-shuffle">${icon('shuffle')} escuchar algo</button><button class="button button-secondary" data-action="new-album">${icon('plus')} crear álbum</button></div>
           <div class="home-hero-meta"><span><i></i> biblioteca local</span><span>${tracks.length} pistas</span><span>${albums.length} álbumes</span></div>
         </div>
         <div class="home-hero-art" aria-hidden="true"><div class="hero-orbit hero-orbit-one"></div><div class="hero-orbit hero-orbit-two"></div><div class="hero-record"><div class="hero-record-label">♫</div></div><span class="hero-note hero-note-one">♪</span><span class="hero-note hero-note-two">♫</span><span class="hero-art-caption">PLAY IT YOUR WAY</span></div>
-      </section>${pageHeader('archivo personal','tu música','Álbumes, canciones y playlists guardadas en este navegador.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
+      </section>${pageHeader('archivo personal','tu música','Álbumes, canciones y playlists de tu biblioteca compartida.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
       ${statsMarkup()}
       <section class="section-block">${sectionHeading('álbumes', `${albums.length} en tu biblioteca`, `<button class="text-button" data-view="albums">ver todos ${icon('arrow')}</button>`)}
         ${albums.length ? `<div class="album-grid">${latestAlbums.map(albumCard).join('')}</div>` : emptyState('tu biblioteca está vacía','crea un álbum o importa algunas canciones para empezar.','new-album','crear primer álbum')}
