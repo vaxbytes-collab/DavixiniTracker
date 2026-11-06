@@ -1522,8 +1522,8 @@
     if(event.code==='Space'){event.preventDefault();$('#playButton').click();}
     else if(event.key==='ArrowRight'&&audio.src){audio.currentTime=Math.min((audio.duration||audio.currentTime)+5,audio.currentTime+5);}
     else if(event.key==='ArrowLeft'&&audio.src){audio.currentTime=Math.max(0,audio.currentTime-5);}
-    else if(event.key==='ArrowUp'){event.preventDefault();audio.volume=Math.min(1,audio.volume+.05);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;}
-    else if(event.key==='ArrowDown'){event.preventDefault();audio.volume=Math.max(0,audio.volume-.05);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;}
+    else if(event.key==='ArrowUp'){event.preventDefault();const base=window.DavixiniCrossfade?.getMasterVolume?.()??audio.volume;syncVolume(Math.min(1,base+.05));}
+    else if(event.key==='ArrowDown'){event.preventDefault();const base=window.DavixiniCrossfade?.getMasterVolume?.()??audio.volume;syncVolume(Math.max(0,base-.05));}
   });
 
   async function init() {
