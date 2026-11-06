@@ -244,8 +244,9 @@
     const favoriteIcon = track.favorite ? 'heartFilled' : 'heart';
     const duration = track.duration ? formatTime(track.duration) : '—';
     const secondary = [track.artist || album?.artist || 'artista desconocido', track.fileName || ''].filter(Boolean).join(' · ');
-    return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}">
-      <span class="track-index">${isPlaying && !audio.paused ? '♫' : index + 1}</span>
+    const sortable = Boolean(options.sortType);
+    return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}" ${sortable ? `draggable="true" data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
+      <span class="track-index">${sortable ? '<span class="track-drag-handle" data-drag-track="' + escapeHTML(track.id) + '" title="arrastrar para reordenar" aria-label="arrastra para reordenar">⠿</span>' : ''}<span>${isPlaying && !audio.paused ? '♫' : index + 1}</span></span>
       <button class="track-main" data-action="play-track" data-id="${escapeHTML(track.id)}" aria-label="Reproducir ${escapeHTML(track.title)}">
         <span class="track-thumb">${track.artwork ? `<img src="${cachedObjectUrl(track.artwork)}" alt="">` : icon('musicNote')}</span>
         <span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(secondary)}</small></span>
@@ -339,8 +340,8 @@
     root.innerHTML = `<button class="button button-secondary back-button" data-view="albums">← volver a álbumes</button>
       <section class="album-hero">${coverMarkup(album)}<div class="album-hero-copy"><p class="page-kicker">álbum</p><h1>${escapeHTML(album.title)}</h1><p class="artist">${escapeHTML(album.artist || 'artista desconocido')}</p>${album.description ? `<p class="description">${escapeHTML(album.description)}</p>` : ''}<div class="album-details">${[album.year,album.genre,`${list.length} ${list.length===1?'canción':'canciones'}`].filter(Boolean).map(escapeHTML).join(' · ')} · añadido ${formatDate(album.createdAt)}</div>
         <div class="inline-actions"><button class="button button-primary" data-action="play-album" data-id="${escapeHTML(album.id)}" ${list.length?'':'disabled'}>${icon('play')} reproducir</button><button class="button button-secondary" data-action="add-to-album" data-id="${escapeHTML(album.id)}">${icon('plus')} añadir música</button><button class="button button-secondary" data-action="edit-album" data-id="${escapeHTML(album.id)}">${icon('edit')} editar</button><button class="button button-danger" data-action="delete-album" data-id="${escapeHTML(album.id)}">${icon('trash')} eliminar</button></div></div></section>
-      <div class="detail-toolbar"><h2>canciones</h2><span class="form-hint">usa las acciones de cada pista para editarla o moverla.</span></div>
-      ${trackTable(list,{emptyTitle:'este álbum está vacío',emptyDescription:'añade archivos de audio desde tu dispositivo o arrástralos hasta esta página.',emptyAction:'add-to-album-current',emptyButton:'añadir música'})}
+      <div class="detail-toolbar"><h2>canciones</h2><span class="form-hint">arrastra el símbolo ⠿ para ordenar; en móvil usa el menú de cada canción.</span></div>
+      ${trackTable(list,{sortType:'album',sortId:album.id,emptyTitle:'este álbum está vacío',emptyDescription:'añade archivos de audio desde tu dispositivo o arrástralos hasta esta página.',emptyAction:'add-to-album-current',emptyButton:'añadir música'})}
       <div class="drop-zone" id="albumDropZone" data-album-drop="${escapeHTML(album.id)}">arrastra aquí archivos de audio para añadirlos a este álbum</div>`;
     setBreadcrumb(`álbumes / ${album.title}`);
   }
@@ -351,8 +352,8 @@
     const list = tracksForPlaylist(playlist);
     root.innerHTML = `<button class="button button-secondary back-button" data-view="playlists">← volver a playlists</button>
       <section class="album-hero"><div class="cover-art playlist-mark"><span class="cover-placeholder">≡</span></div><div class="album-hero-copy"><p class="page-kicker">playlist</p><h1>${escapeHTML(playlist.name)}</h1><p class="artist">${escapeHTML(playlist.description || 'sin descripción')}</p><div class="album-details">${list.length} ${list.length===1?'canción':'canciones'} · creada ${formatDate(playlist.createdAt)}</div><div class="inline-actions"><button class="button button-primary" data-action="play-playlist" data-id="${escapeHTML(playlist.id)}" ${list.length?'':'disabled'}>${icon('play')} reproducir</button><button class="button button-secondary" data-action="add-tracks-playlist" data-id="${escapeHTML(playlist.id)}">${icon('plus')} añadir canciones</button><button class="button button-secondary" data-action="edit-playlist" data-id="${escapeHTML(playlist.id)}">${icon('edit')} editar</button><button class="button button-danger" data-action="delete-playlist" data-id="${escapeHTML(playlist.id)}">${icon('trash')} eliminar</button></div></div></section>
-      <div class="detail-toolbar"><h2>lista de reproducción</h2><span class="form-hint">${list.length} pistas</span></div>
-      ${trackTable(list,{emptyTitle:'esta playlist está vacía',emptyDescription:'añade canciones de cualquiera de tus álbumes.',emptyAction:'add-tracks-playlist-current',emptyButton:'añadir canciones'})}`;
+      <div class="detail-toolbar"><h2>lista de reproducción</h2><span class="form-hint">arrastra ⠿ o abre el menú de una pista para cambiar el orden · ${list.length} pistas</span></div>
+      ${trackTable(list,{sortType:'playlist',sortId:playlist.id,emptyTitle:'esta playlist está vacía',emptyDescription:'añade canciones de cualquiera de tus álbumes.',emptyAction:'add-tracks-playlist-current',emptyButton:'añadir canciones'})}`;
     setBreadcrumb(`playlists / ${playlist.name}`);
   }
 
@@ -805,13 +806,45 @@
     catch(error) { toast(`no se pudo quitar: ${error.message}`,'error'); }
   }
 
-  async function moveTrackInAlbum(id, delta) {
-    const album=getAlbum(activeAlbumId); if(!album) return;
-    const ids=[...(album.trackIds||[])]; const index=ids.indexOf(id); const target=index+delta;
-    if(index<0||target<0||target>=ids.length) return;
-    [ids[index],ids[target]]=[ids[target],ids[index]];
-    try { const tx=db.transaction('albums','readwrite'); tx.objectStore('albums').put({...album,trackIds:ids}); await transactionDone(tx); await refreshData(); render(); }
-    catch(error) { toast(`no se pudo ordenar el álbum: ${error.message}`,'error'); }
+  async function reorderTrackInCollection(type, collectionId, trackId, targetTrackId) {
+    const collection = type === 'album' ? getAlbum(collectionId) : type === 'playlist' ? getPlaylist(collectionId) : null;
+    if (!collection || trackId === targetTrackId) return;
+    const ids = [...(type === 'album' ? collection.trackIds || [] : collection.trackIds || [])];
+    const from = ids.indexOf(trackId);
+    const to = ids.indexOf(targetTrackId);
+    if (from < 0 || to < 0) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, trackId);
+    try {
+      const storeName = type === 'album' ? 'albums' : 'playlists';
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).put({...collection, trackIds:ids});
+      await transactionDone(tx);
+      await refreshData();
+      render();
+    } catch (error) {
+      toast('no se pudo guardar el nuevo orden: ' + (error.message || 'error'), 'error');
+    }
+  }
+
+  async function moveTrackInCollection(type, collectionId, trackId, delta) {
+    const collection = type === 'album' ? getAlbum(collectionId) : type === 'playlist' ? getPlaylist(collectionId) : null;
+    if (!collection) return;
+    const ids = [...(collection.trackIds || [])];
+    const index = ids.indexOf(trackId);
+    const target = index + delta;
+    if (index < 0 || target < 0 || target >= ids.length) return;
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    try {
+      const storeName = type === 'album' ? 'albums' : 'playlists';
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).put({...collection, trackIds:ids});
+      await transactionDone(tx);
+      await refreshData();
+      render();
+    } catch (error) {
+      toast('no se pudo guardar el nuevo orden: ' + (error.message || 'error'), 'error');
+    }
   }
 
   function startQueue(list, startIndex=0) {
@@ -939,7 +972,10 @@
     let extra = '';
     if(inPlaylist) extra += `<button class="button button-danger" data-action="remove-from-playlist" data-id="${escapeHTML(trackId)}" data-playlist="${escapeHTML(activePlaylistId)}">${icon('trash')} quitar de esta playlist</button>`;
     if(view==='album' && album?.id===activeAlbumId) {
-      extra += `<button class="button button-secondary" data-action="move-track-up" data-id="${escapeHTML(trackId)}">subir en el álbum</button><button class="button button-secondary" data-action="move-track-down" data-id="${escapeHTML(trackId)}">bajar en el álbum</button>`;
+      extra += `<button class="button button-secondary" data-action="move-track-up" data-id="${escapeHTML(trackId)}">↑ subir posición</button><button class="button button-secondary" data-action="move-track-down" data-id="${escapeHTML(trackId)}">↓ bajar posición</button>`;
+    }
+    if(view==='playlist' && activePlaylistId && (getPlaylist(activePlaylistId)?.trackIds||[]).includes(trackId)) {
+      extra += `<button class="button button-secondary" data-action="move-track-up" data-id="${escapeHTML(trackId)}">↑ subir posición</button><button class="button button-secondary" data-action="move-track-down" data-id="${escapeHTML(trackId)}">↓ bajar posición</button>`;
     }
     showModal(track.title,'acciones de canción', `<div class="settings-actions" style="display:grid;grid-template-columns:1fr 1fr"><button class="button button-secondary" data-action="replace-audio" data-id="${escapeHTML(track.id)}">${icon('replace')} sustituir archivo</button><button class="button button-secondary" data-action="download-track" data-id="${escapeHTML(track.id)}">${icon('download')} descargar archivo</button><button class="button button-secondary" data-action="duplicate-track" data-id="${escapeHTML(track.id)}">duplicar canción</button><button class="button button-secondary" data-action="edit-track" data-id="${escapeHTML(track.id)}">${icon('edit')} editar datos</button><button class="button button-secondary" data-action="add-to-playlist" data-id="${escapeHTML(track.id)}">${icon('list')} añadir a playlist</button><button class="button button-secondary" data-action="toggle-favorite" data-id="${escapeHTML(track.id)}">${icon(track.favorite?'heartFilled':'heart')} ${track.favorite?'quitar favorito':'añadir favorito'}</button><button class="button button-secondary" data-action="play-next" data-id="${escapeHTML(track.id)}">reproducir a continuación</button>${extra}<button class="button button-danger" data-action="delete-track" data-id="${escapeHTML(track.id)}">${icon('trash')} eliminar canción</button></div><div class="modal-footer"><button class="button button-secondary" data-modal-close>cerrar</button></div>`);
   }
@@ -979,7 +1015,12 @@
     else if(action==='download-track') { closeModal(); downloadTrack(id); }
     else if(action==='duplicate-track') await duplicateTrack(id);
     else if(action==='remove-from-playlist') { closeModal(); await removeFromPlaylist(id,button.dataset.playlist); }
-    else if(action==='move-track-up' || action==='move-track-down') { await moveTrackInAlbum(id,action==='move-track-up'?-1:1); closeModal(); }
+    else if(action==='move-track-up' || action==='move-track-down') {
+      const type=view==='playlist'?'playlist':'album';
+      const collectionId=type==='playlist'?activePlaylistId:activeAlbumId;
+      closeModal();
+      await moveTrackInCollection(type,collectionId,id,action==='move-track-up'?-1:1);
+    }
     else if(action==='play-next') { if(!queue.length || queueIndex<0) { closeModal(); startQueue([getTrack(id)]); return; } const rest=queue.filter(tid=>tid!==id); rest.splice(Math.max(0,queueIndex+1),0,id); queue=rest; closeModal(); toast('canción añadida a continuación.'); }
     else if(action==='add-to-playlist') choosePlaylist(id);
     else if(action==='add-track-to-playlist') await appendTrackToPlaylist(button.dataset.track,id);
@@ -1049,6 +1090,57 @@
       savePlaylistForm(event).then(async()=>{if(trackToAdd){const created=playlists[0];if(created)await appendTrackToPlaylist(trackToAdd,created.id);}});
     } else if(event.target.id==='trackForm') saveTrackForm(event);
   });
+
+
+  let draggedTrackId = null;
+  let draggedSortType = null;
+  let draggedSortId = null;
+
+  root.addEventListener('dragstart', event => {
+    const handle = event.target.closest('[data-drag-track]');
+    if (!handle) { event.preventDefault(); return; }
+    const row = handle.closest('[data-track-row]');
+    if (!row?.dataset.sortType || !row.dataset.sortId) { event.preventDefault(); return; }
+    draggedTrackId = row.dataset.trackRow;
+    draggedSortType = row.dataset.sortType;
+    draggedSortId = row.dataset.sortId;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', draggedTrackId);
+    row.classList.add('dragging-row');
+  });
+
+  root.addEventListener('dragover', event => {
+    if (!draggedTrackId) return;
+    const row = event.target.closest('[data-track-row][data-sort-type]');
+    if (!row || row.dataset.sortType !== draggedSortType || row.dataset.sortId !== draggedSortId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    $$('.track-row.drop-target', root).forEach(item => item.classList.remove('drop-target'));
+    if (row.dataset.trackRow !== draggedTrackId) row.classList.add('drop-target');
+  });
+
+  root.addEventListener('drop', event => {
+    if (!draggedTrackId) return;
+    const row = event.target.closest('[data-track-row][data-sort-type]');
+    event.preventDefault();
+    const sourceId = draggedTrackId;
+    const type = draggedSortType;
+    const collectionId = draggedSortId;
+    const targetId = row?.dataset.trackRow;
+    clearTrackDragState();
+    if (row && row.dataset.sortType === type && row.dataset.sortId === collectionId && targetId) {
+      reorderTrackInCollection(type, collectionId, sourceId, targetId);
+    }
+  });
+
+  root.addEventListener('dragend', clearTrackDragState);
+
+  function clearTrackDragState() {
+    draggedTrackId = null;
+    draggedSortType = null;
+    draggedSortId = null;
+    $$('.track-row.dragging-row, .track-row.drop-target', root).forEach(row => row.classList.remove('dragging-row','drop-target'));
+  }
 
   root.addEventListener('dragover',event=>{
     if(view==='album' && event.dataTransfer?.types?.includes('Files')) {event.preventDefault();$('#albumDropZone')?.classList.add('dragging');}
