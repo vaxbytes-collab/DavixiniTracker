@@ -727,7 +727,7 @@
         if (wasPlaying) audio.play().catch(() => toast('archivo sustituido, pero el navegador no pudo reproducirlo.', 'error'));
       }
       closeModal(); render();
-      toast('archivo sustituido. se conservaron título, favoritos y playlists.');
+      toast('audio sustituido. se conservaron título, metadatos, portada, favoritos y playlists.');
     } catch (error) {
       toast(error?.name === 'QuotaExceededError' ? 'no hay espacio suficiente para guardar el nuevo archivo.' : 'no se pudo sustituir: ' + (error.message || 'error'), 'error');
     }
@@ -1269,8 +1269,8 @@
     if(event.code==='Space'){event.preventDefault();$('#playButton').click();}
     else if(event.key==='ArrowRight'&&audio.src){audio.currentTime=Math.min((audio.duration||audio.currentTime)+5,audio.currentTime+5);}
     else if(event.key==='ArrowLeft'&&audio.src){audio.currentTime=Math.max(0,audio.currentTime-5);}
-    else if(event.key==='ArrowUp'){event.preventDefault();audio.volume=Math.min(1,audio.volume+.05);$('#volumeBar').value=audio.volume;}
-    else if(event.key==='ArrowDown'){event.preventDefault();audio.volume=Math.max(0,audio.volume-.05);$('#volumeBar').value=audio.volume;}
+    else if(event.key==='ArrowUp'){event.preventDefault();audio.volume=Math.min(1,audio.volume+.05);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;}
+    else if(event.key==='ArrowDown'){event.preventDefault();audio.volume=Math.max(0,audio.volume-.05);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;}
   });
 
   async function init() {
