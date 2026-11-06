@@ -12,7 +12,7 @@
   async function saveTrack(id, patch){const list=await allTracks();const track=list.find(t=>t.id===id);if(!track)return;return new Promise((resolve,reject)=>{const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').put(Object.assign({},track,patch));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
   function currentId(){const title=$('#playerTrackTitle')?.textContent;return window.__davixiniCurrentTrackId || null;}
   function modal(title, kicker, body){const backdrop=$('#modalBackdrop'), panel=$('#modalPanel'), content=$('#modalContent');if(!backdrop||!panel||!content)return;$('#modalTitle').textContent=title;$('#modalKicker').textContent=kicker;panel.classList.add('modal-wide');content.innerHTML=body;backdrop.hidden=false;document.body.style.overflow='hidden';}
-  function close(){const b=$('#modalBackdrop');if(b){b.hidden=true;document.body.style.overflow='';}}
+  function close(){const b=$('#modalBackdrop');if(b){b.hidden=true;document.body.style.overflow='';}$('#modalPanel')?.classList.remove('modal-wide');}
   function hub(){modal('centro de extras','10 herramientas para tu música',
     '<div class="feature-grid">'+
     '<button class="feature-tile" data-extra="eq"><strong>♫ ecualizador</strong><small>5 bandas ajustables</small></button>'+
