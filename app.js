@@ -1033,6 +1033,9 @@
         audio.addEventListener('error',onError,{once:true});
       });
       try {
+        // al cambiar el src puede quedar encolado el evento ended del audio anterior.
+        // lo ignoramos durante el relevo para que no reinicie ni avance la pista nueva.
+        window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 700;
         audio.pause();
         queueIndex=index;
         window.__davixiniCurrentTrackId=id;
@@ -1502,6 +1505,7 @@
   });
   audio.addEventListener('ended',()=>{
     if(window.__davixiniCrossfadeActive) return;
+    if(performance.now() < (window.__davixiniCrossfadeSuppressEndedUntil || 0)) return;
     if(repeatMode==='one'){audio.currentTime=0;audio.play().catch(()=>{});}else nextTrack(1);
   });
   audio.addEventListener('error',()=>{if(audio.src)toast('el navegador no puede reproducir este archivo.','error');});
