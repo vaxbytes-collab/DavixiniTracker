@@ -67,6 +67,8 @@
   let shuffle = false;
   let repeatMode = 'off'; // off | all | one
   let playbackRate = 1;
+  let cloudConfigured = false;
+  let cloudAdmin = false;
   let pendingCover = null;
   let pendingCoverUrl = null;
   let removePendingCover = false;
@@ -174,6 +176,66 @@
     playlists = p.sort((x,y) => (y.createdAt || 0) - (x.createdAt || 0));
     updateCounts();
     updateStorage();
+  }
+
+  async function replaceLocalLibrary(snapshot) {
+    const tx = db.transaction(['albums','tracks','playlists'], 'readwrite');
+    const done = transactionDone(tx);
+    const albumStore = tx.objectStore('albums');
+    const trackStore = tx.objectStore('tracks');
+    const playlistStore = tx.objectStore('playlists');
+    albumStore.clear(); trackStore.clear(); playlistStore.clear();
+    (snapshot.albums || []).forEach(item => albumStore.put(item));
+    (snapshot.tracks || []).forEach(item => trackStore.put(item));
+    (snapshot.playlists || []).forEach(item => playlistStore.put(item));
+    await done;
+    await refreshData();
+  }
+
+  function updateCloudControls() {
+    document.body.classList.toggle('visitor-mode', cloudConfigured && !cloudAdmin);
+    const access = $('#adminAccessButton');
+    const publish = $('#publishCloudButton');
+    if (!cloudConfigured) {
+      access.hidden = true;
+      publish.hidden = true;
+      return;
+    }
+    access.hidden = false;
+    access.textContent = cloudAdmin ? 'cerrar sesión admin' : 'acceso admin';
+    publish.hidden = !cloudAdmin;
+  }
+
+  function cloudLoginModal() {
+    showModal('acceso administrador', 'zona privada', `<form id="cloudLoginForm">
+      <div class="form-field"><label for="cloudEmail">correo de administrador</label><input id="cloudEmail" type="email" autocomplete="username" required></div>
+      <div class="form-field"><label for="cloudPassword">contraseña</label><input id="cloudPassword" type="password" autocomplete="current-password" required></div>
+      <p class="form-hint">solo las cuentas autorizadas desde supabase pueden publicar canciones. no hay registro público.</p>
+      <div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">iniciar sesión</button></div>
+    </form>`);
+  }
+
+  async function refreshPublishedLibrary() {
+    const snapshot = await window.DavixiniCloud.loadLibrary();
+    const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length;
+    if (hasRemote) await replaceLocalLibrary(snapshot);
+    return Boolean(hasRemote);
+  }
+
+  async function publishCloudLibrary() {
+    if (!cloudAdmin) return;
+    const button = $('#publishCloudButton');
+    button.disabled = true;
+    button.textContent = 'publicando…';
+    try {
+      await window.DavixiniCloud.publishLibrary(albums, tracks, playlists);
+      toast('biblioteca publicada. ya está disponible para visitantes.');
+    } catch (error) {
+      toast('no se pudo publicar: ' + (error.message || 'error'), 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'publicar cambios';
+    }
   }
 
   function updateCounts() {
@@ -1062,6 +1124,11 @@
 
   async function handleAction(button) {
     const {action,id}=button.dataset;
+    const visitorActions = new Set(['play-all-shuffle','open-album','open-playlist','open-artist','open-genre','play-artist','play-genre','play-album','play-playlist','play-track','download-track','play-next','queue-play','queue-remove','queue-move-up','queue-move-down','queue-clear']);
+    if (cloudConfigured && !cloudAdmin && !visitorActions.has(action)) {
+      toast('solo el administrador puede modificar la biblioteca.');
+      return;
+    }
     if(action==='new-album') albumForm();
     else if(action==='play-all-shuffle') { const mix=tracks.filter(track=>track.blob).sort(()=>Math.random()-.5); startQueue(mix); }
     else if(action==='new-playlist') playlistForm();
@@ -1133,8 +1200,22 @@
     if(event.target.closest('[data-modal-close]') || event.target===backdrop) closeModal();
   });
 
-  $('#createAlbumTop').addEventListener('click',()=>albumForm());
-  $('#importTop').addEventListener('click',()=>chooseAlbumForImport());
+  $('#adminAccessButton').addEventListener('click', async () => {
+    if (!cloudConfigured) return;
+    if (!cloudAdmin) { cloudLoginModal(); return; }
+    if (!confirm('¿cerrar la sesión de administrador en este dispositivo?')) return;
+    try {
+      await window.DavixiniCloud.signOut();
+      cloudAdmin = false;
+      updateCloudControls();
+      await refreshPublishedLibrary();
+      render();
+      toast('sesión de administrador cerrada.');
+    } catch (error) { toast('no se pudo cerrar sesión: ' + error.message, 'error'); }
+  });
+  $('#publishCloudButton').addEventListener('click', publishCloudLibrary);
+  $('#createAlbumTop').addEventListener('click',()=>{if(!cloudConfigured||cloudAdmin)albumForm();});
+  $('#importTop').addEventListener('click',()=>{if(!cloudConfigured||cloudAdmin)chooseAlbumForImport();});
   $('#settingsButton').addEventListener('click',settingsModal);
   $('#modalClose').addEventListener('click',closeModal);
   $('#globalSearch').addEventListener('input',()=>{ view='search'; renderSearch(); setNavState(); });
@@ -1149,6 +1230,7 @@
   });
   $('#audioFileInput').addEventListener('change',event=>{
     const files=event.target.files; const albumId=event.target.dataset.albumId;
+    if(cloudConfigured && !cloudAdmin) { toast('solo el administrador puede subir música.'); event.target.value=''; return; }
     if(files?.length) importFiles(files,albumId);
   });
   $('#replaceAudioFileInput').addEventListener('change',event=>{
@@ -1163,7 +1245,23 @@
     if(event.target.closest('#removeCoverButton')) { pendingCover=null; removePendingCover=true; $('#coverPreview').innerHTML='<span class="cover-placeholder">♪</span>'; }
   });
   modalContent.addEventListener('submit',event=>{
-    if(event.target.id==='albumForm') {
+    if(event.target.id==='cloudLoginForm') {
+      event.preventDefault();
+      const email = $('#cloudEmail').value.trim();
+      const password = $('#cloudPassword').value;
+      const submit = event.target.querySelector('[type="submit"]');
+      submit.disabled = true;
+      submit.textContent = 'verificando…';
+      window.DavixiniCloud.signIn(email, password).then(async () => {
+        cloudAdmin = true;
+        updateCloudControls();
+        const hasRemote = await refreshPublishedLibrary();
+        if (!hasRemote && tracks.length) toast('tu biblioteca local está lista. pulsa “publicar cambios” para compartirla.');
+        closeModal(); render();
+        toast('sesión de administrador iniciada.');
+      }).catch(error => toast(error.message || 'no se pudo iniciar sesión.', 'error'))
+        .finally(() => { submit.disabled = false; submit.textContent = 'iniciar sesión'; });
+    } else if(event.target.id==='albumForm') {
       const importAfter=event.target.dataset.importAfter==='true';
       const form=event.target;
       saveAlbumForm(event).then(()=>{if(importAfter && activeAlbumId) openFilePicker(activeAlbumId);});
@@ -1235,6 +1333,7 @@
   });
   root.addEventListener('dragleave',event=>{if(!root.contains(event.relatedTarget))$('#albumDropZone')?.classList.remove('dragging');});
   root.addEventListener('drop',event=>{
+    if(cloudConfigured && !cloudAdmin)return;
     if(view!=='album')return;
     const zone=event.target.closest('[data-album-drop]');
     if(!zone)return;
@@ -1314,6 +1413,26 @@
   async function init() {
     try {
       db=await openDatabase();
+      await refreshData();
+      if (window.DavixiniCloud?.configured()) {
+        cloudConfigured = true;
+        try {
+          const state = await window.DavixiniCloud.init();
+          cloudAdmin = state.admin;
+          const snapshot = await window.DavixiniCloud.loadLibrary();
+          const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length;
+          if (hasRemote) {
+            if (!cloudAdmin || !tracks.length || confirm('hay una biblioteca publicada en supabase. ¿cargar esa versión en este navegador?')) {
+              await replaceLocalLibrary(snapshot);
+            }
+          }
+          updateCloudControls();
+        } catch (cloudError) {
+          cloudAdmin = false;
+          updateCloudControls();
+          toast('supabase no respondió: ' + (cloudError.message || 'revisa la configuración.'), 'error');
+        }
+      }
       await refreshData();
       const savedTheme=localStorage.getItem('mi-musica-theme');
       const theme=savedTheme==='light'?'light':'dark';
