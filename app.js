@@ -1075,7 +1075,6 @@
       try {
         // al cambiar el src puede quedar encolado el evento ended del audio anterior.
         // lo ignoramos durante el relevo para que no reinicie ni avance la pista nueva.
-        window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 700;
         audio.pause();
         queueIndex=index;
         window.__davixiniCurrentTrackId=id;
@@ -1094,6 +1093,9 @@
         }
         updatePlayer();
         await audio.play();
+        // Mantén protegida la nueva pista justo después del relevo por si el
+        // navegador entrega tarde el ended que pertenecía al recurso anterior.
+        window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 1200;
         if(previousUrl && previousUrl!==url) URL.revokeObjectURL(previousUrl);
         updatePlayer();
         return true;
@@ -1544,6 +1546,9 @@
   audio.addEventListener('ended',()=>{
     if(window.__davixiniCrossfadeActive) return;
     if(performance.now() < (window.__davixiniCrossfadeSuppressEndedUntil || 0)) return;
+    // Un ended atrasado de la pista previa puede llegar cuando ya se está
+    // reproduciendo la nueva; solo avanza si la fuente actual sí llegó al final.
+    if(Number.isFinite(audio.duration) && audio.duration>0 && audio.currentTime<audio.duration-0.35) return;
     if(repeatMode==='one'){audio.currentTime=0;audio.play().catch(()=>{});}else nextTrack(1);
   });
   audio.addEventListener('error',()=>{if(audio.src)toast('el navegador no puede reproducir este archivo.','error');});
