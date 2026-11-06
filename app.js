@@ -45,7 +45,8 @@
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
     artist: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.5V20"/>',
     wave: '<path d="M2 10v4m4-8v12m4-16v20m4-14v8m4-11v14m4-10v6"/>',
-    replace: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3"/>'
+    replace: '<path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 1M4 17l2 1a7 7 0 0 0 12.4-3"/>',
+    expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3"/>'
   };
   const icon = (name, extra = '') => `<svg viewBox="0 0 24 24" aria-hidden="true" ${extra}>${iconPaths[name] || iconPaths.musicNote}</svg>`;
   $$('[data-icon]').forEach(node => { const name = node.dataset.icon; node.innerHTML = icon(name); });
@@ -95,6 +96,7 @@
   const tracksForAlbum = album => (album?.trackIds || []).map(getTrack).filter(Boolean);
   const tracksForPlaylist = playlist => (playlist?.trackIds || []).map(getTrack).filter(Boolean);
   const albumForTrack = track => getAlbum(track?.albumId);
+  const coverForTrack = track => albumForTrack(track)?.cover || track?.artwork || null;
   const titleFromFile = name => String(name || 'sin título').replace(/\.[^.]+$/, '').replace(/[._]+/g, ' ').trim() || 'sin título';
 
   function toast(message, type = 'info') {
@@ -243,12 +245,13 @@
     const isPlaying = track.id === currentTrackId();
     const favoriteIcon = track.favorite ? 'heartFilled' : 'heart';
     const duration = track.duration ? formatTime(track.duration) : '—';
-    const secondary = [track.artist || album?.artist || 'artista desconocido', track.fileName || ''].filter(Boolean).join(' · ');
+    const secondary = track.artist || album?.artist || 'artista desconocido';
+    const trackCover = coverForTrack(track);
     const sortable = Boolean(options.sortType);
     return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}" ${sortable ? `data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
       <span class="track-index">${sortable ? '<span class="track-drag-handle" draggable="true" data-drag-track="' + escapeHTML(track.id) + '" title="arrastrar para reordenar" aria-label="arrastra para reordenar">⠿</span>' : ''}<span>${isPlaying && !audio.paused ? '♫' : index + 1}</span></span>
       <button class="track-main" data-action="play-track" data-id="${escapeHTML(track.id)}" aria-label="Reproducir ${escapeHTML(track.title)}">
-        <span class="track-thumb">${track.artwork ? `<img src="${cachedObjectUrl(track.artwork)}" alt="">` : icon('musicNote')}</span>
+        <span class="track-thumb">${trackCover ? `<img src="${cachedObjectUrl(trackCover)}" alt="">` : icon('musicNote')}</span>
         <span class="track-copy"><strong>${escapeHTML(track.title)}</strong><small>${escapeHTML(secondary)}</small></span>
       </button>
       <span class="track-album" title="${escapeHTML(album?.title || '')}">${escapeHTML(album?.title || 'sin álbum')}</span>
@@ -498,7 +501,7 @@
 
   function trackForm(track) {
     const album = albumForTrack(track);
-    showModal('editar canción','metadatos de la pista', `<form id="trackForm"><div class="form-grid"><div class="form-field full"><label for="trackTitle">título *</label><input id="trackTitle" required maxlength="160" value="${escapeHTML(track.title)}"></div><div class="form-field"><label for="trackArtist">artista</label><input id="trackArtist" maxlength="120" value="${escapeHTML(track.artist||'')}"></div><div class="form-field"><label for="trackGenre">género</label><input id="trackGenre" maxlength="60" value="${escapeHTML(track.genre||'')}" placeholder="género"></div><div class="form-field"><label for="trackYear">año</label><input id="trackYear" maxlength="4" inputmode="numeric" value="${escapeHTML(track.year||'')}"></div><div class="form-field"><label for="trackAlbum">álbum</label><select id="trackAlbum"><option value="">sin álbum</option>${albums.map(a=>`<option value="${escapeHTML(a.id)}" ${a.id===track.albumId?'selected':''}>${escapeHTML(a.title)}</option>`).join('')}</select></div></div><p class="form-hint">archivo actual: ${escapeHTML(track.fileName||'sin nombre')} · ${formatBytes(track.size||track.blob?.size||0)}</p><input type="hidden" id="editingTrackId" value="${escapeHTML(track.id)}"><div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">guardar cambios</button></div></form>`);
+    showModal('editar canción','metadatos de la pista', `<form id="trackForm"><div class="form-grid"><div class="form-field full"><label for="trackTitle">título *</label><input id="trackTitle" required maxlength="160" value="${escapeHTML(track.title)}"></div><div class="form-field"><label for="trackArtist">artista</label><input id="trackArtist" maxlength="120" value="${escapeHTML(track.artist||'')}"></div><div class="form-field"><label for="trackGenre">género</label><input id="trackGenre" maxlength="60" value="${escapeHTML(track.genre||'')}" placeholder="género"></div><div class="form-field"><label for="trackYear">año</label><input id="trackYear" maxlength="4" inputmode="numeric" value="${escapeHTML(track.year||'')}"></div><div class="form-field"><label for="trackAlbum">álbum</label><select id="trackAlbum"><option value="">sin álbum</option>${albums.map(a=>`<option value="${escapeHTML(a.id)}" ${a.id===track.albumId?'selected':''}>${escapeHTML(a.title)}</option>`).join('')}</select></div></div><p class="form-hint">audio guardado · ${formatBytes(track.size||track.blob?.size||0)}</p><input type="hidden" id="editingTrackId" value="${escapeHTML(track.id)}"><div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">guardar cambios</button></div></form>`);
   }
 
   function chooseAlbumForImport() {
@@ -701,10 +704,11 @@
       return;
     }
     if (!file.size) { toast('el archivo seleccionado está vacío.', 'error'); return; }
-    const metadata = await parseId3(file);
-    const updated = {...track, blob:file, fileName:file.name,
+    // sustituye únicamente el audio y sus datos técnicos: título, nombre original,
+    // artista, portada, álbum, favoritos y playlists permanecen intactos.
+    const updated = {...track, blob:file,
       mimeType:file.type || track.mimeType || 'audio/mpeg', size:file.size,
-      duration:0, artwork:metadata.artwork || track.artwork || null, replacedAt:Date.now()};
+      duration:0, replacedAt:Date.now()};
     try {
       const tx = db.transaction('tracks', 'readwrite');
       tx.objectStore('tracks').put(updated);
@@ -894,8 +898,8 @@
     const album=albumForTrack(track);
     $('#playerTrackTitle').textContent=track?.title||'nada reproduciéndose';
     $('#playerTrackArtist').textContent=track ? [track.artist||album?.artist,album?.title].filter(Boolean).join(' · ') || 'artista desconocido' : 'elige una canción';
+    const artwork=coverForTrack(track);
     const cover=$('#playerArtwork');
-    const artwork=track?.artwork||album?.cover;
     cover.innerHTML=artwork?`<img src="${cachedObjectUrl(artwork)}" alt="">`:'<span class="artwork-placeholder">♪</span>';
     $('#playButton').innerHTML=icon(audio.paused?'play':'pause');
     $('#playButton').setAttribute('aria-label',audio.paused?'reproducir':'pausar');
@@ -907,10 +911,47 @@
     $('#favoriteCurrent').disabled=!track;
     $('#favoriteCurrent').classList.toggle('active',Boolean(track?.favorite));
     $('#favoriteCurrent').innerHTML=icon(track?.favorite?'heartFilled':'heart');
+    $('#expandPlayerButton').disabled=!track;
     $('#elapsedTime').textContent=formatTime(audio.currentTime||0);
     $('#totalTime').textContent=formatTime(audio.duration||track?.duration||0);
     if(!Number.isFinite(audio.duration)||audio.duration<=0) $('#seekBar').value=0;
-    $$('#viewRoot [data-track-row]').forEach(row=>row.classList.toggle('is-playing',row.dataset.trackRow===id));
+    $('#viewRoot [data-track-row]').forEach(row=>row.classList.toggle('is-playing',row.dataset.trackRow===id));
+    updateFullPlayer(track,album,artwork);
+  }
+
+  function updateFullPlayer(track,album,artwork) {
+    const panel=$('#fullPlayer');
+    const cover=$('#fullPlayerArtwork');
+    const coverUrl=artwork?cachedObjectUrl(artwork):'';
+    cover.innerHTML=coverUrl?`<img src="${coverUrl}" alt="">`:'<span class="full-player-placeholder">♪</span>';
+    panel.style.setProperty('--full-cover-image',coverUrl?`url("${coverUrl}")`:'none');
+    $('#fullPlayerTitle').textContent=track?.title||'elige una canción';
+    $('#fullPlayerArtist').textContent=track?[track.artist||album?.artist,album?.title].filter(Boolean).join(' · ')||'artista desconocido':'tu biblioteca te espera';
+    $('#fullPlayerPlay').innerHTML=icon(audio.paused?'play':'pause');
+    $('#fullPlayerPlay').setAttribute('aria-label',audio.paused?'reproducir':'pausar');
+    $('#fullPlayerShuffle').classList.toggle('active',shuffle);
+    $('#fullPlayerRepeat').classList.toggle('active',repeatMode!=='off');
+    $('#fullPlayerFavorite').disabled=!track;
+    $('#fullPlayerFavorite').classList.toggle('active',Boolean(track?.favorite));
+    $('#fullPlayerFavorite').innerHTML=icon(track?.favorite?'heartFilled':'heart');
+    $('#fullPlayerElapsed').textContent=formatTime(audio.currentTime||0);
+    $('#fullPlayerTotal').textContent=formatTime(audio.duration||track?.duration||0);
+    $('#fullPlayerSeekBar').value=Number.isFinite(audio.duration)&&audio.duration>0?audio.currentTime/audio.duration*1000:0;
+    $('#fullPlayerVolume').value=audio.volume;
+    $('#fullPlayerQueue').disabled=!queue.length;
+    $('#fullPlayerShuffle').disabled=!track;
+    $('#fullPlayerRepeat').disabled=!track;
+    panel.classList.toggle('is-playing',Boolean(track&&!audio.paused));
+  }
+
+  function setFullPlayerVisible(visible) {
+    const panel=$('#fullPlayer');
+    if(visible&&!currentTrackId()) { toast('primero reproduce una canción para abrir el reproductor.'); return; }
+    panel.hidden=!visible;
+    panel.setAttribute('aria-hidden',String(!visible));
+    document.body.classList.toggle('full-player-open',visible);
+    if(visible) { updatePlayer(); $('#fullPlayerClose').focus(); }
+    else $('#expandPlayerButton').focus();
   }
 
   async function toggleCurrentFavorite() { const id=currentTrackId(); if(id) await toggleFavorite(id); }
@@ -1171,20 +1212,38 @@
   $('#repeatButton').addEventListener('click',()=>{repeatMode=repeatMode==='off'?'all':repeatMode==='all'?'one':'off';updatePlayer();});
   $('#favoriteCurrent').addEventListener('click',toggleCurrentFavorite);
   $('#queueButton').addEventListener('click',showQueue);
+  $('#expandPlayerButton').addEventListener('click',()=>setFullPlayerVisible(true));
+  $('#fullPlayerClose').addEventListener('click',()=>setFullPlayerVisible(false));
+  $('#fullPlayerPlay').addEventListener('click',()=>$('#playButton').click());
+  $('#fullPlayerPrevious').addEventListener('click',()=>$('#previousButton').click());
+  $('#fullPlayerNext').addEventListener('click',()=>$('#nextButton').click());
+  $('#fullPlayerShuffle').addEventListener('click',()=>$('#shuffleButton').click());
+  $('#fullPlayerRepeat').addEventListener('click',()=>$('#repeatButton').click());
+  $('#fullPlayerFavorite').addEventListener('click',toggleCurrentFavorite);
+  $('#fullPlayerQueue').addEventListener('click',()=>{setFullPlayerVisible(false);showQueue();});
   $('#seekBar').addEventListener('input',event=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=audio.duration*Number(event.target.value)/1000;});
-  $('#volumeBar').addEventListener('input',event=>{audio.volume=Number(event.target.value);localStorage.setItem('mi-musica-volume',String(audio.volume));});
+  $('#fullPlayerSeekBar').addEventListener('input',event=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=audio.duration*Number(event.target.value)/1000;});
+  const syncVolume=value=>{audio.volume=Number(value);$('#volumeBar').value=audio.volume;$('#fullPlayerVolume').value=audio.volume;localStorage.setItem('mi-musica-volume',String(audio.volume));};
+  $('#volumeBar').addEventListener('input',event=>syncVolume(event.target.value));
+  $('#fullPlayerVolume').addEventListener('input',event=>syncVolume(event.target.value));
   audio.addEventListener('play',updatePlayer);
   audio.addEventListener('pause',updatePlayer);
   audio.addEventListener('loadedmetadata',async()=>{
     const track=getTrack(currentTrackId());
     $('#totalTime').textContent=formatTime(audio.duration);
+    $('#fullPlayerTotal').textContent=formatTime(audio.duration);
     if(track && Number.isFinite(audio.duration) && Math.abs((track.duration||0)-audio.duration)>1) {
       const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').put({...track,duration:audio.duration});tx.oncomplete=()=>refreshData().catch(()=>{});
     }
   });
   audio.addEventListener('timeupdate',()=>{
     $('#elapsedTime').textContent=formatTime(audio.currentTime);
-    if(Number.isFinite(audio.duration)&&audio.duration>0)$('#seekBar').value=audio.currentTime/audio.duration*1000;
+    $('#fullPlayerElapsed').textContent=formatTime(audio.currentTime);
+    if(Number.isFinite(audio.duration)&&audio.duration>0) {
+      const progress=audio.currentTime/audio.duration*1000;
+      $('#seekBar').value=progress;
+      $('#fullPlayerSeekBar').value=progress;
+    }
   });
   audio.addEventListener('ended',()=>{
     if(repeatMode==='one'){audio.currentTime=0;audio.play().catch(()=>{});}else nextTrack(1);
@@ -1200,6 +1259,7 @@
   document.addEventListener('keydown',event=>{
     const target=event.target;
     const typing=target instanceof HTMLElement && (target.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(target.tagName));
+    if(event.key==='Escape'&&!$('#fullPlayer').hidden){setFullPlayerVisible(false);return;}
     if(event.key==='Escape'&&!backdrop.hidden){closeModal();return;}
     if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();$('#globalSearch').focus();return;}
     if(typing||!backdrop.hidden)return;
