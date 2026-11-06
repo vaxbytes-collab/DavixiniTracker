@@ -78,6 +78,7 @@
     <div class="player-track">
       <div class="artwork artwork-small" id="playerArtwork"><span class="artwork-placeholder">♪</span></div>
       <div class="player-track-copy"><strong id="playerTrackTitle">nada reproduciéndose</strong><span id="playerTrackArtist">elige una canción</span></div>
+      <button class="icon-button player-expand-button" id="expandPlayerButton" aria-label="Abrir reproductor a pantalla completa" title="Reproductor a pantalla completa" disabled><span data-icon="expand"></span></button>
       <button class="icon-button favorite-current" id="favoriteCurrent" aria-label="Añadir a favoritos" title="Añadir a favoritos" disabled><span data-icon="heart"></span></button>
     </div>
     <div class="player-main">
@@ -100,6 +101,45 @@
       <input id="volumeBar" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volumen">
     </div>
   </footer>
+
+  <section class="full-player" id="fullPlayer" hidden role="dialog" aria-modal="true" aria-label="reproductor a pantalla completa" aria-hidden="true">
+    <div class="full-player-backdrop" aria-hidden="true"></div>
+    <div class="full-player-inner">
+      <header class="full-player-header">
+        <div class="full-player-brand"><span class="full-player-brand-mark">♫</span><span>davixiniTracker</span><small>ahora suena</small></div>
+        <button class="full-player-close" id="fullPlayerClose"><span>minimizar</span><span aria-hidden="true">↘</span></button>
+      </header>
+      <main class="full-player-content">
+        <div class="full-player-art-column">
+          <div class="full-player-art" id="fullPlayerArtwork"><span class="full-player-placeholder">♪</span></div>
+          <div class="full-player-art-caption"><span class="full-player-live-dot"></span> reproduciendo desde tu biblioteca</div>
+        </div>
+        <section class="full-player-details" aria-label="controles de reproducción">
+          <p class="full-player-kicker">tu música, a tu manera</p>
+          <h1 id="fullPlayerTitle">elige una canción</h1>
+          <p class="full-player-artist" id="fullPlayerArtist">tu biblioteca te espera</p>
+          <div class="full-player-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="full-player-timeline">
+            <div class="full-player-times"><time id="fullPlayerElapsed">0:00</time><time id="fullPlayerTotal">0:00</time></div>
+            <input id="fullPlayerSeekBar" type="range" min="0" max="1000" value="0" aria-label="Posición de reproducción">
+          </div>
+          <div class="full-player-controls">
+            <button class="full-player-control" id="fullPlayerShuffle" aria-label="Reproducción aleatoria" title="Aleatorio"><span data-icon="shuffle"></span></button>
+            <button class="full-player-control" id="fullPlayerPrevious" aria-label="Canción anterior" title="Anterior"><span data-icon="previous"></span></button>
+            <button class="full-player-play" id="fullPlayerPlay" aria-label="Reproducir" title="Reproducir"><span data-icon="play"></span></button>
+            <button class="full-player-control" id="fullPlayerNext" aria-label="Siguiente canción" title="Siguiente"><span data-icon="next"></span></button>
+            <button class="full-player-control" id="fullPlayerRepeat" aria-label="Cambiar repetición" title="Repetir"><span data-icon="repeat"></span></button>
+          </div>
+          <div class="full-player-bottom">
+            <button class="full-player-action" id="fullPlayerFavorite" aria-label="Añadir a favoritos" title="Favoritos"><span data-icon="heart"></span><small>favorito</small></button>
+            <button class="full-player-action" id="fullPlayerQueue" aria-label="Abrir cola" title="Cola de reproducción"><span data-icon="queue"></span><small>cola</small></button>
+            <label class="full-player-volume"><span data-icon="volume"></span><input id="fullPlayerVolume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volumen"></label>
+          </div>
+        </section>
+      </main>
+      <footer class="full-player-footer"><span>sincronizado con tu biblioteca local</span><span>rojo · carmín · violeta</span></footer>
+    </div>
+  </section>
 
   <audio id="audioEngine" preload="metadata"></audio>
   <input id="audioFileInput" class="visually-hidden" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.webm,.mp4,.aiff,.aif,.wma" multiple>
