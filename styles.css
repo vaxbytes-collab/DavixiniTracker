@@ -832,3 +832,38 @@ h1 { letter-spacing:-.065em; }
 .full-player-speed select { cursor:pointer; }
 .full-player-speed select:focus-visible { outline:2px solid #ff91b4;outline-offset:3px; }
 @media (max-width:520px) { .queue-item { gap:5px; } .queue-reorder .track-action { width:23px;height:28px; } }
+
+
+/* Supabase: biblioteca pública de solo lectura y controles privados de administración. */
+#adminAccessButton[hidden], #publishCloudButton[hidden] { display: none !important; }
+.visitor-mode #importTop,
+.visitor-mode #createAlbumTop,
+.visitor-mode #favoriteCurrent,
+.visitor-mode #fullPlayerFavorite,
+.visitor-mode .track-actions,
+.visitor-mode .track-drag-handle,
+.visitor-mode .drop-zone,
+.visitor-mode button[data-action="new-album"],
+.visitor-mode button[data-action="new-playlist"],
+.visitor-mode button[data-action="import-audio"],
+.visitor-mode button[data-action="add-to-album"],
+.visitor-mode button[data-action="add-to-album-current"],
+.visitor-mode button[data-action="add-tracks-playlist"],
+.visitor-mode button[data-action="add-tracks-playlist-current"],
+.visitor-mode button[data-action="edit-album"],
+.visitor-mode button[data-action="edit-playlist"],
+.visitor-mode button[data-action="delete-album"],
+.visitor-mode button[data-action="delete-playlist"],
+.visitor-mode .settings-section button[data-action="import-backup"],
+.visitor-mode .settings-section button[data-action="clear-library"] {
+  display: none !important;
+}
+.visitor-mode .album-hero .inline-actions button:not([data-action="play-album"]):not([data-action="play-playlist"]) {
+  display: none !important;
+}
+.visitor-mode .home-hero-meta span:first-child::before {
+  content: "☁ ";
+}
+@media (max-width: 720px) {
+  #adminAccessButton, #publishCloudButton { min-height: 34px; padding-inline: 9px; font-size: 10px; }
+}
