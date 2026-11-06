@@ -12,7 +12,7 @@
   nextAudio.preload = 'auto';
   nextAudio.volume = 0;
   let prepared = null, preparedUrl = null, fading = false, committing = false;
-  let fadeTimer = null, fadeStartedAt = 0;
+  let fadeTimer = null, fadeStartedAt = 0, activeFadeDuration = 0;
   let masterVolume = Math.min(1, Math.max(0, Number(localStorage.getItem('mi-musica-volume') ?? 0.8)));
   const $ = (s, r=document) => r.querySelector(s);
   const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -91,6 +91,8 @@
       return;
     }
     if(!prepared || prepared.id !== plan.id) { nextAudio.pause(); return; }
+    const remaining = Number.isFinite(audio.duration) ? audio.duration - audio.currentTime : crossfadeSettings.duration;
+    activeFadeDuration = Math.max(0.25, Math.min(crossfadeSettings.duration, remaining));
     fading = true;
     window.__davixiniCrossfadeActive = true;
     fadeStartedAt = performance.now();
@@ -98,7 +100,7 @@
   }
   function updateCrossfade(){
     if(!fading || committing) return;
-    const progress = Math.min(1, (performance.now() - fadeStartedAt) / (crossfadeSettings.duration * 1000));
+    const progress = Math.min(1, (performance.now() - fadeStartedAt) / (activeFadeDuration * 1000));
     audio.volume = masterVolume * (1 - progress);
     nextAudio.volume = masterVolume * progress;
     if(progress >= 1) finishCrossfade();
@@ -111,6 +113,7 @@
     const url = preparedUrl;
     const resumeAt = nextAudio.currentTime;
     const targetVolume = masterVolume;
+    nextAudio.volume = targetVolume;
     try {
       await window.DavixiniPlayback.commitCrossfade(plan.index,plan.id,url,resumeAt,targetVolume);
       nextAudio.pause();
