@@ -822,3 +822,13 @@ h1 { letter-spacing:-.065em; }
 @media (prefers-reduced-motion:reduce) {
   .hero-record,.hero-orbit-one,.hero-note,.view-root { animation:none !important; }
 }
+
+.queue-reorder { display:flex;gap:2px; }
+.queue-reorder .track-action { font-size:15px;font-weight:700; }
+.queue-item .track-main { min-width:0; }
+.queue-item .track-main .track-copy { min-width:0; }
+.queue-item .track-main .track-copy strong,.queue-item .track-main .track-copy small { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.queue-item .queue-reorder .track-action { width:27px;height:30px; }
+.full-player-speed select { cursor:pointer; }
+.full-player-speed select:focus-visible { outline:2px solid #ff91b4;outline-offset:3px; }
+@media (max-width:520px) { .queue-item { gap:5px; } .queue-reorder .track-action { width:23px;height:28px; } }
