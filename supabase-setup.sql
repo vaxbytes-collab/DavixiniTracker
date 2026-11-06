@@ -122,6 +122,6 @@ create policy "admins can delete library media" on storage.objects
 
 -- PASO FINAL: crea tu usuario en Authentication → Users y copia su UUID.
 -- Sustituye el texto de abajo por ese UUID y ejecuta esta consulta por separado:
--- insert into public.library_admins (user_id)
--- values ('PEGA-AQUI-EL-UUID-DE-TU-USUARIO')
--- on conflict (user_id) do nothing;
+insert into public.library_admins (user_id)
+values ('90315f88-8f16-4d7c-9c83-96525e602564')
+on conflict (user_id) do nothing;
