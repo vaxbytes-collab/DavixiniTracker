@@ -141,7 +141,7 @@
     masterVolume = Math.min(1,Math.max(0,Number(value)||0));
     if(!fading && !committing) audio.volume = masterVolume;
   }
-  window.DavixiniCrossfade = {cancel:cancelCrossfade,setMasterVolume};
+  window.DavixiniCrossfade = {cancel:cancelCrossfade,setMasterVolume,getMasterVolume:()=>masterVolume};
   function normalize(){try{graph();ctx.resume();const on=compressor.ratio.value===1;compressor.threshold.value=on?-16:0;compressor.ratio.value=on?3:1;toast(on?'nivelador dinámico activado.':'nivelador desactivado.');}catch(e){toast(e.message);}}
   function ab(){if(!audio.src){toast('reproduce una canción primero.');return;}if(loopA===null||loopB!==null){loopA=audio.currentTime;loopB=null;loopOn=false;toast('punto A marcado. vuelve a pulsar para marcar B.');}else{loopB=audio.currentTime;if(loopB<=loopA){loopB=null;toast('B debe ir después de A.');return;}loopOn=true;toast('bucle A—B activado. vuelve a pulsar para reiniciar.');}}
   async function filtersTool(){const ts=await allTracks();modal('filtros avanzados','artista · género · año','<form id="extraFilterForm"><div class="form-grid"><div class="form-field full"><label>artista contiene</label><input id="fa"></div><div class="form-field"><label>género contiene</label><input id="fg"></div><div class="form-field"><label>año</label><input id="fy"></div></div><div class="modal-footer"><button type="button" class="button button-secondary" data-extra="close">cancelar</button><button class="button button-primary">filtrar</button></div></form><div id="extraFilterResults"></div>');}
