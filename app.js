@@ -245,7 +245,7 @@
     const duration = track.duration ? formatTime(track.duration) : '—';
     const secondary = [track.artist || album?.artist || 'artista desconocido', track.fileName || ''].filter(Boolean).join(' · ');
     const sortable = Boolean(options.sortType);
-    return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}" ${sortable ? `draggable="true" data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
+    return `<div class="track-row ${isPlaying ? 'is-playing' : ''}" data-track-row="${escapeHTML(track.id)}" ${sortable ? `data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
       <span class="track-index">${sortable ? '<span class="track-drag-handle" draggable="true" data-drag-track="' + escapeHTML(track.id) + '" title="arrastrar para reordenar" aria-label="arrastra para reordenar">⠿</span>' : ''}<span>${isPlaying && !audio.paused ? '♫' : index + 1}</span></span>
       <button class="track-main" data-action="play-track" data-id="${escapeHTML(track.id)}" aria-label="Reproducir ${escapeHTML(track.title)}">
         <span class="track-thumb">${track.artwork ? `<img src="${cachedObjectUrl(track.artwork)}" alt="">` : icon('musicNote')}</span>
@@ -264,7 +264,7 @@
 
   function trackTable(list, options = {}) {
     if (!list.length) return emptyState(options.emptyTitle || 'no hay canciones aquí', options.emptyDescription || 'importa archivos de audio para llenar esta lista.', options.emptyAction || 'import-audio', options.emptyButton || 'importar música');
-    return `<div class="track-table ${options.compact ? 'compact' : ''}">
+    return `<div class="track-table ${options.compact ? 'compact' : ''}" ${options.sortType ? `data-sort-type="${escapeHTML(options.sortType)}" data-sort-id="${escapeHTML(options.sortId)}"` : ''}>
       <div class="track-head"><span>#</span><span>título</span><span>álbum</span><span>duración</span><span style="text-align:right">acciones</span></div>
       ${list.map((track,index) => trackRow(track,index,options)).join('')}
     </div>`;
