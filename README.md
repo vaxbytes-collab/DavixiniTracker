@@ -9,6 +9,7 @@ Biblioteca musical personal que funciona directamente en el navegador. Permite o
 - Importación múltiple de archivos de audio y lectura de etiquetas ID3 habituales.
 - Edición de título, artista, género, año y álbum de una pista.
 - **Sustitución del archivo de audio de una pista existente**, conservando su identidad, favoritos y pertenencia a playlists.
+- Reordenación persistente de pistas en álbumes y playlists: arrastra el asa ⠿ para soltarlas antes o después de otra pista; en el menú de acciones también puedes subir o bajar una posición.
 - Duplicar pistas, descargar el archivo local y eliminar canciones.
 - Ordenación por título, artista, álbum, fecha de importación y duración.
 - Exploración agrupada por artista y género.
