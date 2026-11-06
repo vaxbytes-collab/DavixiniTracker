@@ -8,7 +8,9 @@ Biblioteca musical personal que funciona directamente en el navegador. Permite o
 - Álbumes con portada, artista, año, género y descripción.
 - Importación múltiple de archivos de audio y lectura de etiquetas ID3 habituales.
 - Edición de título, artista, género, año y álbum de una pista.
-- **Sustitución del archivo de audio de una pista existente**, conservando su identidad, favoritos y pertenencia a playlists.
+- **Sustitución del audio de una pista existente** sin cambiar su título, nombre original, metadatos, portada, favoritos, álbum ni pertenencia a playlists.
+- Las listas muestran el título musical, nunca el nombre técnico del archivo.
+- Las canciones muestran primero la portada de su álbum en las listas y en el reproductor.
 - Reordenación persistente de pistas en álbumes y playlists: arrastra el asa ⠿ para soltarlas antes o después de otra pista; en el menú de acciones también puedes subir o bajar una posición.
 - Duplicar pistas, descargar el archivo local y eliminar canciones.
 - Ordenación por título, artista, álbum, fecha de importación y duración.
@@ -19,6 +21,7 @@ Biblioteca musical personal que funciona directamente en el navegador. Permite o
 - Aleatorio, repetición de cola o repetición de pista.
 - Búsqueda global, favoritos e historial.
 - Controles de volumen, progreso, anterior y siguiente.
+- Reproductor inmersivo a pantalla completa con portada grande, fondo ambiental, visualizador animado y controles sincronizados con el reproductor compacto.
 - Atajos: espacio (reproducir/pausar), flechas izquierda/derecha (saltar 5 segundos), flechas arriba/abajo (volumen) y Ctrl/⌘ + K (buscar).
 
 ### Datos
