@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111311">
-  <meta name="description" content="Biblioteca musical personal. Organiza álbumes, canciones y playlists; reproduce tus archivos de audio sin subirlos a internet.">
-  <title>Mi música</title>
+  <meta name="theme-color" content="#160b18">
+  <meta name="description" content="Una biblioteca musical local para ordenar, descubrir y reproducir tu colección.">
+  <title>davixiniTracker</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
@@ -13,9 +13,9 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Navegación">
-      <a class="brand" href="#inicio" aria-label="Mi música, inicio">
+      <a class="brand" href="#inicio" aria-label="davixiniTracker, inicio">
         <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 18c0 1.1-1.6 2-3.5 2S2 19.1 2 18s1.6-2 3.5-2S9 16.9 9 18Zm12-2c0 1.1-1.6 2-3.5 2S14 17.1 14 16s1.6-2 3.5-2 3.5.9 3.5 2Z"/></svg></span>
-        <span class="brand-copy"><strong>mi música</strong><small>biblioteca personal</small></span>
+        <span class="brand-copy"><strong>davixini<span>Tracker</span></strong><small>sonido en orden.</small></span>
       </a>
 
       <div class="side-group">
@@ -25,6 +25,8 @@
           <button class="nav-item" data-view="albums"><span class="nav-icon" data-icon="albums"></span><span>álbumes</span><span class="nav-count" id="albumCount">0</span></button>
           <button class="nav-item" data-view="songs"><span class="nav-icon" data-icon="music"></span><span>canciones</span><span class="nav-count" id="songCount">0</span></button>
           <button class="nav-item" data-view="playlists"><span class="nav-icon" data-icon="list"></span><span>playlists</span><span class="nav-count" id="playlistCount">0</span></button>
+          <button class="nav-item" data-view="artists"><span class="nav-icon" data-icon="artist"></span><span>artistas</span><span class="nav-count" id="artistCount">0</span></button>
+          <button class="nav-item" data-view="genres"><span class="nav-icon" data-icon="wave"></span><span>géneros</span><span class="nav-count" id="genreCount">0</span></button>
         </nav>
       </div>
 
@@ -68,6 +70,8 @@
     <button class="mobile-nav-item" data-view="songs"><span data-icon="music"></span><small>canciones</small></button>
     <button class="mobile-nav-item" data-view="playlists"><span data-icon="list"></span><small>playlists</small></button>
     <button class="mobile-nav-item" data-view="favorites"><span data-icon="heart"></span><small>favoritos</small></button>
+    <button class="mobile-nav-item" data-view="artists"><span data-icon="artist"></span><small>artistas</small></button>
+    <button class="mobile-nav-item" data-view="genres"><span data-icon="wave"></span><small>géneros</small></button>
   </nav>
 
   <footer class="player" id="player">
@@ -99,6 +103,7 @@
 
   <audio id="audioEngine" preload="metadata"></audio>
   <input id="audioFileInput" class="visually-hidden" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.webm,.mp4,.aiff,.aif,.wma" multiple>
+  <input id="replaceAudioFileInput" class="visually-hidden" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.webm,.mp4,.aiff,.aif,.wma">
   <input id="coverFileInput" class="visually-hidden" type="file" accept="image/*">
   <input id="backupFileInput" class="visually-hidden" type="file" accept="application/json,.json">
 
