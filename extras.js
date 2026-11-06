@@ -93,7 +93,9 @@
     }
     if(!prepared || prepared.id !== plan.id) { nextAudio.pause(); return; }
     const remaining = Number.isFinite(audio.duration) ? audio.duration - audio.currentTime : crossfadeSettings.duration;
-    activeFadeDuration = Math.max(0.25, Math.min(crossfadeSettings.duration, remaining));
+    // La duración configurada es la duración real de la mezcla; no la acortes
+    // por unos milisegundos de retraso del evento timeupdate.
+    activeFadeDuration = crossfadeSettings.duration;
     fading = true;
     window.__davixiniCrossfadeActive = true;
     fadeStartedAt = performance.now();
@@ -184,7 +186,6 @@
   audio.addEventListener('play',prepareNext);
   audio.addEventListener('loadedmetadata',prepareNext);
   nextAudio.addEventListener('canplay',maybeStartCrossfade);
-  audio.addEventListener('ended',()=>{if(fading)finishCrossfade();});
   audio.addEventListener('pause',()=>{if(fading&&!committing)cancelCrossfade();});
   document.addEventListener('DOMContentLoaded',()=>{const button=document.createElement('button');button.className='nav-item settings-link';button.id='extraToolsButton';button.innerHTML='<span class="nav-icon">✦</span><span>centro de extras</span>';button.addEventListener('click',hub);const settings=$('#settingsButton');if(settings)settings.parentNode.insertBefore(button,settings);});
 })();
