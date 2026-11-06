@@ -140,7 +140,7 @@
       };
       request.onsuccess = () => { request.result.onversionchange = () => request.result.close(); resolve(request.result); };
       request.onerror = () => reject(request.error || new Error('no se pudo abrir la base de datos.'));
-      request.onblocked = () => reject(new Error('cierra otras pestañas de mi música y vuelve a intentarlo.'));
+      request.onblocked = () => reject(new Error('cierra otras pestañas de davixiniTracker y vuelve a intentarlo.'));
     });
   }
 
@@ -270,20 +270,21 @@
   }
 
   function statsMarkup() {
-    const duration = tracks.reduce((sum,track)=>sum+(track.duration||0),0);
     const totalSize = tracks.reduce((sum,track)=>sum+(track.size||track.blob?.size||0),0);
     return `<div class="stats-row">
       <div class="stat-card"><strong>${albums.length}</strong><span>álbumes</span></div>
       <div class="stat-card"><strong>${tracks.length}</strong><span>canciones</span></div>
+      <div class="stat-card"><strong>${artistCollection().length}</strong><span>artistas</span></div>
+      <div class="stat-card"><strong>${genreCollection().length}</strong><span>géneros</span></div>
       <div class="stat-card"><strong>${playlists.length}</strong><span>playlists</span></div>
-      <div class="stat-card"><strong>${formatBytes(totalSize)}</strong><span>archivos locales</span></div>
+      <div class="stat-card"><strong>${formatBytes(totalSize)}</strong><span>audio guardado</span></div>
     </div>`;
   }
 
   function renderHome() {
     const latestAlbums = [...albums].slice(0,6);
     const latestTracks = [...tracks].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).slice(0,6);
-    root.innerHTML = `${pageHeader('biblioteca','inicio','Toda tu música, organizada en un solo lugar.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
+    root.innerHTML = `${pageHeader('archivo personal','tu música','Álbumes, canciones y playlists guardadas en este navegador.', `<button class="button button-primary" data-action="new-album">${icon('plus')} crear álbum</button>`)}
       ${statsMarkup()}
       <section class="section-block">${sectionHeading('álbumes', `${albums.length} en tu biblioteca`, `<button class="text-button" data-view="albums">ver todos ${icon('arrow')}</button>`)}
         ${albums.length ? `<div class="album-grid">${latestAlbums.map(albumCard).join('')}</div>` : emptyState('tu biblioteca está vacía','crea un álbum o importa algunas canciones para empezar.','new-album','crear primer álbum')}
