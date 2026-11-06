@@ -497,7 +497,7 @@
 
   function trackForm(track) {
     const album = albumForTrack(track);
-    showModal('editar canción','metadatos de la pista', `<form id="trackForm"><div class="form-field"><label for="trackTitle">título *</label><input id="trackTitle" required maxlength="160" value="${escapeHTML(track.title)}"></div><div class="form-field"><label for="trackArtist">artista</label><input id="trackArtist" maxlength="120" value="${escapeHTML(track.artist||'')}"></div><div class="form-field"><label for="trackAlbum">álbum</label><select id="trackAlbum"><option value="">sin álbum</option>${albums.map(a=>`<option value="${escapeHTML(a.id)}" ${a.id===track.albumId?'selected':''}>${escapeHTML(a.title)}</option>`).join('')}</select></div><p class="form-hint">archivo original: ${escapeHTML(track.fileName||'sin nombre')} · ${formatBytes(track.size||track.blob?.size||0)}</p><input type="hidden" id="editingTrackId" value="${escapeHTML(track.id)}"><div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">guardar cambios</button></div></form>`);
+    showModal('editar canción','metadatos de la pista', `<form id="trackForm"><div class="form-grid"><div class="form-field full"><label for="trackTitle">título *</label><input id="trackTitle" required maxlength="160" value="${escapeHTML(track.title)}"></div><div class="form-field"><label for="trackArtist">artista</label><input id="trackArtist" maxlength="120" value="${escapeHTML(track.artist||'')}"></div><div class="form-field"><label for="trackGenre">género</label><input id="trackGenre" maxlength="60" value="${escapeHTML(track.genre||'')}" placeholder="género"></div><div class="form-field"><label for="trackYear">año</label><input id="trackYear" maxlength="4" inputmode="numeric" value="${escapeHTML(track.year||'')}"></div><div class="form-field"><label for="trackAlbum">álbum</label><select id="trackAlbum"><option value="">sin álbum</option>${albums.map(a=>`<option value="${escapeHTML(a.id)}" ${a.id===track.albumId?'selected':''}>${escapeHTML(a.title)}</option>`).join('')}</select></div></div><p class="form-hint">archivo actual: ${escapeHTML(track.fileName||'sin nombre')} · ${formatBytes(track.size||track.blob?.size||0)}</p><input type="hidden" id="editingTrackId" value="${escapeHTML(track.id)}"><div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">guardar cambios</button></div></form>`);
   }
 
   function chooseAlbumForImport() {
@@ -671,7 +671,7 @@
     const track = getTrack(id);
     if (!track) return;
     const targetAlbumId = $('#trackAlbum').value || null;
-    const updated = {...track,title:$('#trackTitle').value.trim(),artist:$('#trackArtist').value.trim(),albumId:targetAlbumId};
+    const updated = {...track,title:$('#trackTitle').value.trim(),artist:$('#trackArtist').value.trim(),genre:$('#trackGenre').value.trim(),year:$('#trackYear').value.trim(),albumId:targetAlbumId};
     if (!updated.title) return;
     try {
       const tx = db.transaction(['tracks','albums'],'readwrite');
@@ -899,12 +899,12 @@
     if(total>300*1024*1024 && !confirm(`la biblioteca ocupa ${formatBytes(total)}. el archivo de copia será aún mayor y puede necesitar bastante memoria. ¿continuar?`)) return;
     toast('preparando copia de seguridad…');
     try {
-      const backup={app:'Mi música',formatVersion:1,exportedAt:new Date().toISOString(),albums:[],tracks:[],playlists:[]};
+      const backup={app:'davixiniTracker',legacyApp:'Mi música',formatVersion:1,exportedAt:new Date().toISOString(),albums:[],tracks:[],playlists:[]};
       backup.albums=await Promise.all(albums.map(async a=>({...a,cover:a.cover?{type:a.cover.type,data:await base64FromBlob(a.cover)}:null})));
       backup.tracks=await Promise.all(tracks.map(async t=>({...t,blob:t.blob?{type:t.blob.type,data:await base64FromBlob(t.blob)}:null,artwork:t.artwork?{type:t.artwork.type,data:await base64FromBlob(t.artwork)}:null})));
       backup.playlists=playlists;
       const file=new Blob([JSON.stringify(backup)],{type:'application/json'});
-      const url=URL.createObjectURL(file); const link=document.createElement('a'); link.href=url; link.download=`mi-musica-backup-${new Date().toISOString().slice(0,10)}.json`; link.click();
+      const url=URL.createObjectURL(file); const link=document.createElement('a'); link.href=url; link.download=`davixiniTracker-backup-${new Date().toISOString().slice(0,10)}.json`; link.click();
       setTimeout(()=>URL.revokeObjectURL(url),4000); toast('copia de seguridad descargada.');
     } catch(error) { toast(`no se pudo crear la copia: ${error.message}`,'error'); }
   }
@@ -913,7 +913,7 @@
     if(!file) return;
     try {
       const backup=JSON.parse(await file.text());
-      if(backup.app!=='Mi música'||backup.formatVersion!==1||!Array.isArray(backup.albums)||!Array.isArray(backup.tracks)||!Array.isArray(backup.playlists)) throw new Error('el archivo no parece una copia válida de mi música.');
+      if(!['Mi música','davixiniTracker'].includes(backup.app)||backup.formatVersion!==1||!Array.isArray(backup.albums)||!Array.isArray(backup.tracks)||!Array.isArray(backup.playlists)) throw new Error('el archivo no parece una copia válida de davixiniTracker.');
       if(!confirm(`se reemplazará la biblioteca actual por ${backup.albums.length} álbumes, ${backup.tracks.length} canciones y ${backup.playlists.length} playlists. ¿continuar?`)) return;
       const restoredAlbums=backup.albums.map(a=>({...a,cover:a.cover?.data?blobFromBase64(a.cover.data,a.cover.type):null}));
       const restoredTracks=backup.tracks.map(t=>({...t,blob:t.blob?.data?blobFromBase64(t.blob.data,t.blob.type):null,artwork:t.artwork?.data?blobFromBase64(t.artwork.data,t.artwork.type):null}));
