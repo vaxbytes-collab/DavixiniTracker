@@ -55,6 +55,8 @@
         <div class="topbar-actions">
           <label class="search-box" for="globalSearch"><span data-icon="search"></span><input id="globalSearch" type="search" placeholder="buscar canciones, álbumes…" autocomplete="off"><kbd>Ctrl K</kbd></label>
           <button class="icon-button theme-button" id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema"><span data-icon="sun"></span></button>
+          <button class="button button-secondary" id="adminAccessButton">acceso admin</button>
+          <button class="button button-primary" id="publishCloudButton" hidden>publicar cambios</button>
           <button class="button button-secondary" id="importTop"><span data-icon="upload"></span><span>importar música</span></button>
           <button class="button button-primary" id="createAlbumTop"><span data-icon="plus"></span><span>nuevo álbum</span></button>
         </div>
@@ -156,6 +158,9 @@
   </div>
 
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="./supabase-config.js" defer></script>
+  <script src="./supabase-cloud.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
