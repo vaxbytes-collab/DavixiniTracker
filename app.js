@@ -1297,7 +1297,7 @@
     else if(action==='export-backup') await exportBackup();
     else if(action==='import-backup') { closeModal(); $('#backupFileInput').click(); }
     else if(action==='clear-library') await clearLibrary();
-    else if(action==='reset-player') { shuffle=false; repeatMode='off'; playbackRate=1; audio.playbackRate=1; audio.volume=.8; $('#volumeBar').value=.8; $('#fullPlayerVolume').value=.8; $('#fullPlayerSpeed').value='1'; localStorage.setItem('mi-musica-volume','0.8'); localStorage.setItem('mi-musica-speed','1'); updatePlayer(); toast('controles restablecidos.'); }
+    else if(action==='reset-player') { shuffle=false; repeatMode='off'; playbackRate=1; audio.playbackRate=1; if(window.DavixiniCrossfade?.setMasterVolume)window.DavixiniCrossfade.setMasterVolume(.8);else audio.volume=.8; $('#volumeBar').value=.8; $('#fullPlayerVolume').value=.8; $('#fullPlayerSpeed').value='1'; localStorage.setItem('mi-musica-volume','0.8'); localStorage.setItem('mi-musica-speed','1'); updatePlayer(); toast('controles restablecidos.'); }
   }
 
   // Navegación global y acciones delegadas.
