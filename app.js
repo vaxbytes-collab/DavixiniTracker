@@ -256,7 +256,6 @@
         <button class="track-action ${track.favorite ? 'is-favorite' : ''}" data-action="toggle-favorite" data-id="${escapeHTML(track.id)}" aria-label="${track.favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}" title="${track.favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}">${icon(favoriteIcon, track.favorite ? 'class="fill-heart"' : '')}</button>
         <button class="track-action" data-action="add-to-playlist" data-id="${escapeHTML(track.id)}" aria-label="Añadir a playlist" title="Añadir a playlist">${icon('list')}</button>
         <button class="track-action" data-action="edit-track" data-id="${escapeHTML(track.id)}" aria-label="Editar canción" title="Editar metadatos">${icon('edit')}</button>
-        <button class="track-action" data-action="replace-audio" data-id="${escapeHTML(track.id)}" aria-label="Reemplazar archivo de audio" title="Reemplazar archivo de audio">${icon('replace')}</button>
         <button class="track-action" data-action="track-more" data-id="${escapeHTML(track.id)}" aria-label="Más acciones" title="Más acciones">${icon('more')}</button>
       </span>
     </div>`;
@@ -527,7 +526,7 @@
     showModal('ajustes y copias','tu biblioteca', `<div class="settings-section"><h3>copia de seguridad</h3><p>exporta tus álbumes, portadas, playlists y archivos de audio en un único archivo JSON. puede ocupar bastante espacio.</p><div class="settings-actions"><button class="button button-primary" data-action="export-backup">${icon('download')} exportar biblioteca</button><button class="button button-secondary" data-action="import-backup">${icon('upload')} restaurar copia</button></div><p class="settings-note">tamaño aproximado de audio: ${formatBytes(total)}. guarda la copia en otro dispositivo o unidad.</p></div>
       <div class="settings-section"><h3>reproducción</h3><p>los controles del reproductor también funcionan con el teclado: espacio para reproducir o pausar, flechas para moverte y Ctrl/⌘ + K para buscar.</p><div class="settings-actions"><button class="button button-secondary" data-action="reset-player">restablecer volumen y reproducción</button></div></div>
       <div class="settings-section"><h3>datos locales</h3><p>la biblioteca vive en el almacenamiento de este navegador. borrar sus datos puede eliminar canciones y portadas. los archivos no se envían a un servidor.</p><div class="settings-actions"><button class="button button-danger" data-action="clear-library">borrar biblioteca completa</button></div></div>
-      <div class="settings-section"><h3>acerca de</h3><p>Mi música es una biblioteca local sin cuenta, publicidad, analítica ni servicios externos de música.</p><p class="settings-note">Los formatos reproducibles dependen del navegador y del sistema operativo.</p></div>`);
+      <div class="settings-section"><h3>acerca de</h3><p>davixiniTracker es una biblioteca local sin cuenta, publicidad, analítica ni servicios externos de música.</p><p class="settings-note">Los formatos reproducibles dependen del navegador y del sistema operativo.</p></div>`);
   }
 
   function openFilePicker(albumId) {
