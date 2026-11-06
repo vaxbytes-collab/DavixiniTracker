@@ -1,22 +1,34 @@
-# Mi música
+# davixiniTracker
 
-Biblioteca musical personal hecha con HTML, CSS y JavaScript nativos. No usa frameworks, cuentas, publicidad, analítica ni servicios de música externos.
+Biblioteca musical personal que funciona directamente en el navegador. Permite organizar archivos de audio en álbumes y playlists, explorar por artista o género y reproducir la colección sin subir los archivos a ningún servidor.
 
 ## Funciones
 
-- Álbumes con título, artista, año, género, descripción y portada.
-- Importación múltiple de MP3 y otros archivos de audio desde el dispositivo.
-- Lectura de etiquetas ID3 (incluidas portadas incrustadas) cuando están disponibles.
-- Edición de metadatos y organización de canciones entre álbumes.
-- Favoritos, playlists personalizadas, cola de reproducción e historial.
-- Reproductor con aleatorio, repetición, volumen y búsqueda global.
-- Copias de seguridad que incluyen audio, portadas, álbumes y playlists; restauración desde JSON.
-- Tema claro/oscuro, interfaz adaptable y atajos de teclado.
-- PWA instalable y caché de la interfaz para uso sin conexión cuando se aloja en HTTPS.
+### Biblioteca
+- Álbumes con portada, artista, año, género y descripción.
+- Importación múltiple de archivos de audio y lectura de etiquetas ID3 habituales.
+- Edición de título, artista, género, año y álbum de una pista.
+- **Sustitución del archivo de audio de una pista existente**, conservando su identidad, favoritos y pertenencia a playlists.
+- Duplicar pistas, descargar el archivo local y eliminar canciones.
+- Ordenación por título, artista, álbum, fecha de importación y duración.
+- Exploración agrupada por artista y género.
 
-## Ejecutar en local
+### Reproductor
+- Cola de reproducción editable.
+- Aleatorio, repetición de cola o repetición de pista.
+- Búsqueda global, favoritos e historial.
+- Controles de volumen, progreso, anterior y siguiente.
+- Atajos: espacio (reproducir/pausar), flechas izquierda/derecha (saltar 5 segundos), flechas arriba/abajo (volumen) y Ctrl/⌘ + K (buscar).
 
-Puedes abrir `index.html` directamente en un navegador moderno. Para probar la instalación PWA y el funcionamiento sin conexión, ejecuta:
+### Datos
+- Almacenamiento en IndexedDB del navegador.
+- Copias de seguridad que incluyen canciones, portadas, álbumes y playlists.
+- Restauración de copias anteriores de Mi música y de davixiniTracker.
+- PWA instalable y caché de interfaz para uso sin conexión cuando se aloja en HTTPS.
+
+## Ejecutar
+
+Puedes abrir `index.html` directamente en un navegador moderno. Para probar PWA y servicio offline, ejecuta:
 
 ```bash
 python -m http.server 8000
@@ -24,30 +36,34 @@ python -m http.server 8000
 
 Abre después http://localhost:8000.
 
-## GitHub Pages
+## Publicar con GitHub Pages
 
-1. Abre **Settings → Pages** en este repositorio.
+1. Abre **Settings → Pages**.
 2. En **Build and deployment**, selecciona **Deploy from a branch**.
 3. Elige la rama `main` y la carpeta raíz `/`.
-4. Guarda los cambios. No hay proceso de compilación ni dependencias.
+4. Guarda. No se requiere proceso de compilación.
 
-## Almacenamiento y privacidad
+## Privacidad y almacenamiento
 
-Los archivos de audio y las portadas se guardan en IndexedDB del navegador. No se envían a ningún servidor. Los datos pertenecen al navegador y al origen del sitio: una biblioteca abierta desde `file://`, `localhost` y GitHub Pages no se comparte automáticamente entre esos orígenes.
+- Los archivos se guardan en IndexedDB del navegador y no se transmiten a un servidor.
+- La biblioteca pertenece al origen desde el que se abrió la aplicación. Los datos de `file://`, `localhost` y GitHub Pages son independientes.
+- Usa **Ajustes y copias → Exportar biblioteca** para conservar una copia fuera del navegador.
+- El espacio disponible depende de la cuota del navegador. Los archivos grandes pueden hacer que la copia JSON ocupe bastante más que los MP3 originales.
+- La compatibilidad de reproducción depende del navegador y de los códecs del sistema. Que un archivo se pueda importar no garantiza que el navegador pueda decodificarlo.
 
-Usa **Ajustes y copias → Exportar biblioteca** para guardar una copia externa. La restauración reemplaza la biblioteca del origen actual por los datos de la copia seleccionada. Los archivos grandes pueden generar copias JSON voluminosas.
+## Formatos
 
-El espacio disponible depende de las cuotas del navegador. La reproducción de FLAC, AAC, OGG, WAV, M4A y otros formatos depende del navegador y del sistema. La importación de un archivo no garantiza que todos los códecs puedan reproducirse.
+La importación acepta MP3, M4A, AAC, OGG, OPUS, WAV, FLAC, WebM, MP4, AIFF y WMA. La compatibilidad efectiva de reproducción depende del navegador.
 
-## Formatos admitidos
+## Estructura del proyecto
 
-La importación admite MP3, M4A, AAC, OGG, OPUS, WAV, FLAC, WebM, MP4, AIFF y WMA. La compatibilidad real de reproducción depende del navegador y de los códecs instalados.
+- `index.html`: interfaz y controles.
+- `styles.css`: identidad visual, tema claro/oscuro y diseño responsive.
+- `app.js`: biblioteca, reproductor, metadatos, importación y copias.
+- `manifest.webmanifest`: instalación PWA.
+- `sw.js`: caché de recursos de la interfaz.
+- `icon.svg`: icono de davixiniTracker.
 
-## Estructura
+## Migración
 
-- `index.html`: estructura de la aplicación.
-- `styles.css`: interfaz y diseño adaptable.
-- `app.js`: biblioteca, almacenamiento local y reproductor.
-- `manifest.webmanifest`: configuración de instalación PWA.
-- `sw.js`: caché offline de los archivos de la interfaz.
-- `icon.svg`: icono de la aplicación.
+El nombre de marca cambió de Mi música a davixiniTracker, pero se conserva el mismo almacén IndexedDB para que las bibliotecas locales existentes sigan disponibles en el mismo navegador y origen. La importación también reconoce copias JSON exportadas con el nombre anterior.
