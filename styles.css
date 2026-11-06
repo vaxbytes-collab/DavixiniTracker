@@ -889,3 +889,10 @@ h1 { letter-spacing:-.065em; }
   content: none;
   display: none;
 }
+
+.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.feature-tile{display:flex;flex-direction:column;gap:7px;text-align:left;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);color:var(--text);cursor:pointer;transition:transform .18s,border-color .18s}
+.feature-tile:hover{transform:translateY(-2px);border-color:var(--accent-2)}
+.feature-tile strong{font-size:13px}.feature-tile small{font-size:11px;color:var(--muted);line-height:1.45}
+.eq-controls{display:grid;gap:18px;padding:10px 0}.eq-band{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;font-size:12px}.eq-band input{grid-column:1/-1;width:100%;accent-color:var(--accent-2)}
+@media(max-width:520px){.feature-grid{grid-template-columns:1fr}}
