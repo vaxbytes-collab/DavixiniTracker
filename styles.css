@@ -494,7 +494,7 @@ input[type="range"] { accent-color: #db4a98; }
 
 
 /* ordenar pistas */
-.track-row[draggable="true"] { transition: background .14s, opacity .14s, transform .14s; }
+.track-row[data-sort-type] { transition: background .14s, opacity .14s, transform .14s; }
 .track-index { display: flex; align-items: center; justify-content: center; gap: 3px; }
 .track-drag-handle {
   display: inline-grid; place-items: center;
@@ -512,6 +512,7 @@ input[type="range"] { accent-color: #db4a98; }
   height: 3px; border-radius: 4px; background: var(--gradient);
   box-shadow: 0 0 13px rgba(199,53,143,.5);
 }
+.track-row.drop-target.drop-target-after::before { top: auto; bottom: -2px; }
 .track-table[data-sort-type="album"], .track-table[data-sort-type="playlist"] { position: relative; }
 .track-table[data-sort-type="album"] .track-row:hover .track-drag-handle,
 .track-table[data-sort-type="playlist"] .track-row:hover .track-drag-handle { color: #ff7189; }
