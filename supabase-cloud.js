@@ -90,16 +90,29 @@
   }
 
   function extensionFor(fileName, fallback) {
-    const match = String(fileName || '').match(/\.([a-z0-9]{2,6})$/i);
+    const match = String(fileName || '').match(/\\.([a-z0-9]{2,6})$/i);
     return (match?.[1] || fallback || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
-  async function uploadBlob(path, blob) {
+  function formatFileSize(bytes) {
+    if (!Number.isFinite(bytes)) return 'tamaño desconocido';
+    if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / 1024).toFixed(0) + ' KB';
+  }
+
+  async function uploadBlob(path, blob, label) {
     if (!blob) return null;
+    const size = formatFileSize(blob.size);
     const { error } = await requireClient().storage.from(config.bucket).upload(path, blob, {
       upsert: true, contentType: blob.type || 'application/octet-stream', cacheControl: '3600'
     });
-    if (error) throw error;
+    if (error) {
+      const message = String(error.message || error);
+      if (/maximum size|exceeded the maximum size|payload too large|entity too large|413/i.test(message)) {
+        throw new Error(`${label} (${size}) supera el límite de tamaño por archivo configurado en Supabase. reduce ese archivo o aumenta el límite del bucket.`);
+      }
+      throw new Error(`${label} (${size}): ${message}`);
+    }
     return path;
   }
 
@@ -121,8 +134,9 @@
 
     const albumRows = [];
     for (const album of albums) {
+      const albumName = album.title || album.name || album.id || 'álbum sin nombre';
       const coverPath = album.cover
-        ? await uploadBlob(`covers/${album.id}/cover.${extensionFor(album.cover.name, 'jpg')}`, album.cover)
+        ? await uploadBlob(`covers/${album.id}/cover.${extensionFor(album.cover.name, 'jpg')}`, album.cover, `portada del álbum “${albumName}”`)
         : null;
       const { cover, ...data } = album;
       albumRows.push({ id: album.id, data, cover_path: coverPath, updated_at: new Date().toISOString() });
@@ -130,12 +144,13 @@
 
     const trackRows = [];
     for (const track of tracks) {
+      const trackName = track.title || track.name || track.id || 'canción sin título';
       const audioPath = track.blob
-        ? await uploadBlob(`audio/${track.id}/audio.${extensionFor(track.audioExtension ? 'audio.' + track.audioExtension : track.fileName, 'mp3')}`, track.blob)
+        ? await uploadBlob(`audio/${track.id}/audio.${extensionFor(track.audioExtension ? 'audio.' + track.audioExtension : track.fileName, 'mp3')}`, track.blob, `audio de “${trackName}”`)
         : track.audioPath || null;
-      if (!audioPath) throw new Error(`falta el archivo de audio de “${track.title || 'una canción'}”.`);
+      if (!audioPath) throw new Error(`falta el archivo de audio de “${trackName}”.`);
       const artworkPath = track.artwork
-        ? await uploadBlob(`artwork/${track.id}/cover.${extensionFor(track.artwork.name, 'jpg')}`, track.artwork)
+        ? await uploadBlob(`artwork/${track.id}/cover.${extensionFor(track.artwork.name, 'jpg')}`, track.artwork, `portada de la canción “${trackName}”`)
         : track.artworkPath || null;
       const { blob, artwork, notes, favorite, lastPlayedAt, playCount, playSeconds, ...data } = track;
       trackRows.push({
