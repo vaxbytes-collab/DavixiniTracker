@@ -866,10 +866,11 @@
       return;
     }
     if (!file.size) { toast('el archivo seleccionado está vacío.', 'error'); return; }
+    window.DavixiniCrossfade?.cancel();
     // sustituye únicamente el audio y sus datos técnicos: título, nombre original,
     // artista, portada, álbum, favoritos y playlists permanecen intactos.
     const updated = {...track, blob:file,
-      mimeType:file.type || track.mimeType || 'audio/mpeg', size:file.size,
+      audioExtension:extension || track.audioExtension || '', mimeType:file.type || track.mimeType || 'audio/mpeg', size:file.size,
       duration:0, replacedAt:Date.now()};
     try {
       const tx = db.transaction('tracks', 'readwrite');
