@@ -56,11 +56,21 @@
     return requireClient().storage.from(config.bucket).getPublicUrl(path).data.publicUrl;
   }
 
-  async function downloadBlob(path) {
+  async function downloadBlob(path, label, warnings) {
     if (!path) return null;
-    const response = await fetch(publicUrl(path));
-    if (!response.ok) throw new Error('no se pudo descargar un archivo de la biblioteca.');
-    return response.blob();
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await fetch(publicUrl(path), { cache: 'no-store' });
+        if (!response.ok) throw new Error('respuesta HTTP ' + response.status);
+        return await response.blob();
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+      }
+    }
+    warnings.push(label + ': ' + (lastError?.message || 'falló la descarga'));
+    return null;
   }
 
   async function loadLibrary() {
@@ -73,20 +83,23 @@
     ]);
     for (const result of [albumResult, trackResult, playlistResult, artistResult]) if (result.error) throw result.error;
 
+    const warnings = [];
     const albums = await Promise.all((albumResult.data || []).map(async row => ({
-      ...row.data, id: row.id, cover: row.cover_path ? await downloadBlob(row.cover_path) : null
+      ...row.data, id: row.id,
+      cover: row.cover_path ? await downloadBlob(row.cover_path, 'portada de ' + (row.data?.title || row.id), warnings) : null
     })));
     const tracks = await Promise.all((trackResult.data || []).map(async row => {
       const { favorite, lastPlayedAt, playCount, playSeconds, notes, ...data } = row.data || {};
-      return {
-        ...data, id: row.id, albumId: row.album_id,
-        blob: await downloadBlob(row.audio_path),
-        artwork: row.artwork_path ? await downloadBlob(row.artwork_path) : null
-      };
+      const title = data.title || data.name || row.id;
+      const [blob, artwork] = await Promise.all([
+        downloadBlob(row.audio_path, 'audio de ' + title, warnings),
+        row.artwork_path ? downloadBlob(row.artwork_path, 'portada de ' + title, warnings) : null
+      ]);
+      return { ...data, id: row.id, albumId: row.album_id, blob, artwork };
     }));
     const playlists = (playlistResult.data || []).map(row => ({ ...row.data, id: row.id }));
     const artists = (artistResult.data || []).map(row => ({ ...row.data, id: row.id }));
-    return { albums, tracks, playlists, artists };
+    return { albums, tracks, playlists, artists, warnings };
   }
 
   function extensionFor(fileName, fallback) {
