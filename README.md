@@ -5,13 +5,14 @@ Plataforma pública de streaming del Davixiniverso. Cualquier visitante puede de
 ## Funciones
 
 ### Biblioteca
-- Perfiles de artista independientes, con nombre y biografía, vinculados a las canciones por su nombre artístico.
+- Perfiles de artista independientes, con nombre y biografía; las canciones y álbumes pueden vincularse mediante un ID de perfil estable y mantienen compatibilidad con bibliotecas antiguas.
 - Álbumes con portada, artista, año, género y descripción.
 - Importación múltiple de archivos de audio y lectura de etiquetas ID3 habituales.
 - Edición de título, artista, género, año y álbum de una pista.
 - **Sustitución del audio de una pista existente** sin cambiar su título, nombre original, metadatos, portada, favoritos, álbum ni pertenencia a playlists.
 - Las listas muestran el título musical, nunca el nombre técnico del archivo.
 - Las canciones muestran primero la portada de su álbum en las listas y en el reproductor.
+- Letras y notas por canción desde el centro de extras; las letras se incluyen al publicar el catálogo.
 - Reordenación persistente de pistas en álbumes y playlists: arrastra el asa ⠿ para soltarlas antes o después de otra pista; en el menú de acciones también puedes subir o bajar una posición.
 - Duplicar pistas, descargar el archivo local y eliminar canciones.
 - Ordenación por título, artista, álbum, fecha de importación y duración.
@@ -20,9 +21,12 @@ Plataforma pública de streaming del Davixiniverso. Cualquier visitante puede de
 ### Reproductor
 - Cola de reproducción editable.
 - Aleatorio, repetición de cola o repetición de pista.
-- Búsqueda global, favoritos e historial.
+- Búsqueda global de artistas, álbumes, canciones y playlists; favoritos e historial.
+- Enlaces compartibles para perfiles, álbumes y canciones.
+- Resumen musical local con reproducciones, tiempo de escucha y canciones más escuchadas.
 - Controles de volumen, progreso, anterior y siguiente.
 - Reproductor inmersivo a pantalla completa con portada grande, fondo ambiental, visualizador animado y controles sincronizados con el reproductor compacto.
+- Crossfade con preparación anticipada y conservación de la posición de la pista entrante al completar la mezcla.
 - Atajos: espacio (reproducir/pausar), flechas izquierda/derecha (saltar 5 segundos), flechas arriba/abajo (volumen) y Ctrl/⌘ + K (buscar).
 
 ### Datos
@@ -90,3 +94,8 @@ La importación acepta MP3, M4A, AAC, OGG, OPUS, WAV, FLAC, WebM, MP4, AIFF y WM
 ## Migración
 
 El nombre de marca cambió de Mi música a davixiniTracker, pero se conserva el mismo almacén IndexedDB para que las bibliotecas locales existentes sigan disponibles en el mismo navegador y origen. La importación también reconoce copias JSON exportadas con el nombre anterior.
+
+
+### Estadísticas y privacidad
+
+Las reproducciones y el tiempo escuchado se guardan por pista en el navegador que los registra. El resumen musical no representa las escuchas de todos los visitantes ni transmite hábitos personales a Supabase. Los enlaces compartidos abren el perfil o álbum correspondiente; los enlaces de canción preparan la pista sin forzar la reproducción automática.
