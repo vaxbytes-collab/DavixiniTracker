@@ -1251,7 +1251,7 @@
     if(total>300*1024*1024 && !confirm(`la biblioteca ocupa ${formatBytes(total)}. el archivo de copia será aún mayor y puede necesitar bastante memoria. ¿continuar?`)) return;
     toast('preparando copia de seguridad…');
     try {
-      const backup={app:'davixiniTracker',legacyApp:'Mi música',formatVersion:1,exportedAt:new Date().toISOString(),albums:[],tracks:[],playlists:[]};
+      const backup={app:'davixiniTracker',legacyApp:'Mi música',formatVersion:1,exportedAt:new Date().toISOString(),albums:[],tracks:[],playlists:[],artists};
       backup.albums=await Promise.all(albums.map(async a=>({...a,cover:a.cover?{type:a.cover.type,data:await base64FromBlob(a.cover)}:null})));
       backup.tracks=await Promise.all(tracks.map(async t=>({...t,blob:t.blob?{type:t.blob.type,data:await base64FromBlob(t.blob)}:null,artwork:t.artwork?{type:t.artwork.type,data:await base64FromBlob(t.artwork)}:null})));
       backup.playlists=playlists;
@@ -1269,18 +1269,18 @@
       if(!confirm(`se reemplazará la biblioteca actual por ${backup.albums.length} álbumes, ${backup.tracks.length} canciones y ${backup.playlists.length} playlists. ¿continuar?`)) return;
       const restoredAlbums=backup.albums.map(a=>({...a,cover:a.cover?.data?blobFromBase64(a.cover.data,a.cover.type):null}));
       const restoredTracks=backup.tracks.map(t=>({...t,blob:t.blob?.data?blobFromBase64(t.blob.data,t.blob.type):null,artwork:t.artwork?.data?blobFromBase64(t.artwork.data,t.artwork.type):null}));
-      const tx=db.transaction(['albums','tracks','playlists'],'readwrite');
-      const a=tx.objectStore('albums'), t=tx.objectStore('tracks'), p=tx.objectStore('playlists');
-      a.clear(); t.clear(); p.clear();
-      restoredAlbums.forEach(item=>a.put(item)); restoredTracks.forEach(item=>t.put(item)); backup.playlists.forEach(item=>p.put(item));
+      const tx=db.transaction(['albums','tracks','playlists','artists'],'readwrite');
+      const a=tx.objectStore('albums'), t=tx.objectStore('tracks'), p=tx.objectStore('playlists'), ar=tx.objectStore('artists');
+      a.clear(); t.clear(); p.clear(); ar.clear();
+      restoredAlbums.forEach(item=>a.put(item)); restoredTracks.forEach(item=>t.put(item)); backup.playlists.forEach(item=>p.put(item)); (backup.artists || []).forEach(item=>ar.put(item));
       await transactionDone(tx); await refreshData(); closeModal(); view='home'; render(); toast('biblioteca restaurada.');
     } catch(error) { toast(`no se pudo restaurar la copia: ${error.message}`,'error'); }
   }
 
   async function clearLibrary() {
-    if(!confirm('esta acción elimina todos los álbumes, canciones y playlists almacenados en este navegador. ¿continuar?')) return;
+    if(!confirm('esta acción elimina todos los álbumes, canciones, playlists y perfiles de artista almacenados en este navegador. ¿continuar?')) return;
     stopPlayback();
-    try { const tx=db.transaction(['albums','tracks','playlists'],'readwrite'); tx.objectStore('albums').clear(); tx.objectStore('tracks').clear(); tx.objectStore('playlists').clear(); await transactionDone(tx); await refreshData(); closeModal(); view='home'; render(); toast('biblioteca vaciada.'); }
+    try { const tx=db.transaction(['albums','tracks','playlists','artists'],'readwrite'); tx.objectStore('albums').clear(); tx.objectStore('tracks').clear(); tx.objectStore('playlists').clear(); tx.objectStore('artists').clear(); await transactionDone(tx); await refreshData(); closeModal(); view='home'; render(); toast('biblioteca vaciada.'); }
     catch(error) { toast(`no se pudo vaciar la biblioteca: ${error.message}`,'error'); }
   }
 
