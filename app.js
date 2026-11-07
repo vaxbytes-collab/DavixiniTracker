@@ -494,7 +494,7 @@
   }
 
   function getArtist(name) { return artists.find(item => item.name === name || item.id === name); }
-  function artistIdsFor(item) { const ids = Array.isArray(item?.artistIds) ? item.artistIds : (item?.artistId ? [item.artistId] : []); return [...new Set(ids.filter(id => artists.some(profile => profile.id === id)))].slice(0,10); }
+  function artistIdsFor(item) { const ids = Array.isArray(item?.artistIds) && item.artistIds.length ? item.artistIds : (item?.artistId ? [item.artistId] : []); return [...new Set(ids.filter(id => artists.some(profile => profile.id === id)))].slice(0,10); }
   function artistNamesFor(item) { return artistIdsFor(item).map(id=>getArtist(id)?.name).filter(Boolean); }
   function artistNameForTrack(track) { return artistNamesFor(track).join(', ') || (track?.artist || getAlbum(track?.albumId)?.artist || '').trim(); }
   function artistNameForAlbum(album) { return artistNamesFor(album).join(', ') || (album?.artist || '').trim(); }
