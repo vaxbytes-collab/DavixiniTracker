@@ -1063,3 +1063,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .full-player-live-dot { background:var(--cover-color-a,#d6d6d6);box-shadow:0 0 13px var(--cover-color-a,#d6d6d6); }
 .full-player input[type="range"] { accent-color:var(--cover-color-a,#e85d9d); }
 .full-player-visualizer i { background:var(--cover-color-a,#fff); }
+
+
+/* fix: la capa decorativa no debe tapar la portada del reproductor */
+.full-player-art::after { background: transparent !important; }
