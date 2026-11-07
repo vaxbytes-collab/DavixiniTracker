@@ -995,32 +995,46 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   border-radius: 10px;
   background: var(--bg);
 }
-.artist-picker-option {
+.artist-choice {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 7px 9px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-2);
-  color: var(--text) !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
 }
-.artist-picker-option:has(input:checked) {
+.artist-choice.is-selected {
   border-color: var(--accent);
   background: var(--surface);
 }
-.artist-picker-option input[type="checkbox"] {
+.artist-choice-mark {
+  display: grid;
+  place-items: center;
   width: 15px;
-  min-height: 15px;
+  height: 15px;
   flex: 0 0 15px;
-  margin: 0;
-  accent-color: var(--accent);
+  border: 1px solid var(--muted);
+  border-radius: 4px;
 }
-.artist-picker-option span {
+.artist-choice.is-selected .artist-choice-mark {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.artist-choice.is-selected .artist-choice-mark::after {
+  content: "✓";
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+}
+.artist-choice > span:last-child {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
