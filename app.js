@@ -872,7 +872,7 @@
   async function replaceTrackAudio(id, file) {
     const track = getTrack(id);
     if (!track || !file) return;
-    const extension = (file.name.split('.').pop() || '').toLowerCase();
+    const extension = file.name.match(/\.([a-z0-9]{2,6})$/i)?.[1]?.toLowerCase() || '';
     if (!file.type.startsWith('audio/') && !AUDIO_ACCEPTED.has(extension)) {
       toast('elige un archivo de audio compatible.', 'error');
       return;
@@ -1338,9 +1338,9 @@
   }
   function openSharedRoute() {
     const params=new URLSearchParams(location.hash.replace(/^#/,''));
-    if(params.has('artist')){const p=getArtist(decodeURIComponent(params.get('artist')));if(p){activeArtist=p.name;view='artist';return;}}
-    if(params.has('album')){const a=getAlbum(decodeURIComponent(params.get('album')));if(a){activeAlbumId=a.id;view='album';return;}}
-    if(params.has('track')){const t=getTrack(decodeURIComponent(params.get('track')));if(t){queue=[t.id];queueIndex=0;view='songs';toast('canción compartida: pulsa reproducir para escucharla.');}}
+    if(params.has('artist')){const p=getArtist(params.get('artist'));if(p){activeArtist=p.name;view='artist';return;}}
+    if(params.has('album')){const a=getAlbum(params.get('album'));if(a){activeAlbumId=a.id;view='album';return;}}
+    if(params.has('track')){const t=getTrack(params.get('track'));if(t){window.DavixiniCrossfade?.cancel();audio.pause();audio.removeAttribute('src');audio.load();if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null;queue=[t.id];queueIndex=0;window.__davixiniCurrentTrackId=t.id;view='songs';toast('canción compartida: pulsa reproducir para escucharla.');}}
   }
   function showTrackLyrics(trackId) {
     const track=getTrack(trackId); if(!track?.lyrics?.trim()){toast('esta canción todavía no tiene letra guardada.');return;}
@@ -1592,7 +1592,7 @@
 
   $('#playButton').addEventListener('click',()=>{
     if(!queue.length){ if(tracks.length)startQueue([...tracks].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0))); return; }
-    if(audio.paused)audio.play().catch(()=>toast('no se pudo iniciar la reproducción.','error'));else audio.pause();
+    if(audio.paused){if(!audio.src)playCurrent();else audio.play().catch(()=>toast('no se pudo iniciar la reproducción.','error'));}else audio.pause();
   });
   $('#previousButton').addEventListener('click',()=>{if(audio.currentTime>3)audio.currentTime=0;else nextTrack(-1);});
   $('#nextButton').addEventListener('click',()=>nextTrack(1));
