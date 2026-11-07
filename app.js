@@ -1239,12 +1239,50 @@
     updateFullPlayer(track,album,artwork);
   }
 
+  function applyFullPlayerPalette(imageUrl,panel) {
+    panel.dataset.paletteSource=imageUrl;
+    if(!imageUrl) {
+      panel.style.setProperty('--cover-color-a','#252039');
+      panel.style.setProperty('--cover-color-b','#171c30');
+      panel.style.setProperty('--cover-color-c','#30202b');
+      return;
+    }
+    const image=new Image();
+    image.onload=()=>{
+      if(panel.dataset.paletteSource!==imageUrl)return;
+      try {
+        const canvas=document.createElement('canvas');
+        canvas.width=32;canvas.height=32;
+        const context=canvas.getContext('2d',{willReadFrequently:true});
+        context.drawImage(image,0,0,32,32);
+        const pixels=context.getImageData(0,0,32,32).data;
+        const bins=new Map();
+        for(let i=0;i<pixels.length;i+=4) {
+          const r=pixels[i],g=pixels[i+1],b=pixels[i+2],alpha=pixels[i+3];
+          if(alpha<180)continue;
+          const key=((r>>5)<<6)|((g>>5)<<3)|(b>>5);
+          const item=bins.get(key)||{count:0,r:0,g:0,b:0};
+          item.count++;item.r+=r;item.g+=g;item.b+=b;bins.set(key,item);
+        }
+        const colors=[...bins.values()].sort((a,b)=>b.count-a.count).slice(0,3).map(item=>{
+          const hex=value=>Math.round(value/item.count).toString(16).padStart(2,'0');
+          return '#'+hex(item.r)+hex(item.g)+hex(item.b);
+        });
+        const fallback=['#252039','#171c30','#30202b'];
+        ['--cover-color-a','--cover-color-b','--cover-color-c'].forEach((name,index)=>panel.style.setProperty(name,colors[index]||colors[0]||fallback[index]));
+      } catch(_) {}
+    };
+    image.onerror=()=>{if(panel.dataset.paletteSource===imageUrl)applyFullPlayerPalette('',panel);};
+    image.src=imageUrl;
+  }
+
   function updateFullPlayer(track,album,artwork) {
     const panel=$('#fullPlayer');
     const cover=$('#fullPlayerArtwork');
     const coverUrl=artwork?cachedObjectUrl(artwork):'';
     cover.innerHTML=coverUrl?`<img src="${coverUrl}" alt="">`:'<span class="full-player-placeholder">♪</span>';
     panel.style.setProperty('--full-cover-image',coverUrl?`url("${coverUrl}")`:'none');
+    applyFullPlayerPalette(coverUrl,panel);
     $('#fullPlayerTitle').textContent=track?.title||'elige una canción';
     $('#fullPlayerArtist').textContent=track?[track.artist||album?.artist,album?.title].filter(Boolean).join(' · ')||'artista desconocido':'tu biblioteca te espera';
     $('#fullPlayerPlay').innerHTML=icon(audio.paused?'play':'pause');
