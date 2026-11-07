@@ -503,9 +503,9 @@
   function artistPickerMarkup(id, selectedIds=[]) {
     const selected=new Set(selectedIds);
     if (!artists.length) return '<p class="form-hint">todavía no hay perfiles. crea artistas desde la sección davixiniverso.</p>';
-    return '<div class="artist-picker" id="'+id+'">'+artists.map(a=>'<label class="artist-picker-option"><input type="checkbox" name="'+id+'[]" value="'+escapeHTML(a.id)+'" '+(selected.has(a.id)?'checked':'')+'><span>'+escapeHTML(a.name)+'</span></label>').join('')+'</div><p class="form-hint">marca las casillas de todos los perfiles que participan. máximo 10.</p>';
+    return '<div class="artist-picker" id="'+id+'">'+artists.map(a=>'<button type="button" class="artist-choice'+(selected.has(a.id)?' is-selected':'')+'" data-artist-id="'+escapeHTML(a.id)+'" aria-pressed="'+(selected.has(a.id)?'true':'false')+'"><span class="artist-choice-mark" aria-hidden="true"></span><span>'+escapeHTML(a.name)+'</span></button>').join('')+'</div><p class="form-hint">pulsa cada perfil para activarlo o desactivarlo. puedes elegir hasta 10.</p>';
   }
-  function selectedArtistIds(selector) { const ids=[...document.querySelectorAll(selector+' input[type="checkbox"]:checked')].map(input=>input.value).filter(Boolean); if(ids.length>10){toast('puedes atribuir como máximo 10 perfiles.', 'error');return null;} return [...new Set(ids)]; }
+  function selectedArtistIds(selector) { const ids=[...document.querySelectorAll(selector+' .artist-choice[aria-pressed="true"]')].map(button=>button.dataset.artistId).filter(Boolean); if(ids.length>10){toast('puedes atribuir como máximo 10 perfiles.', 'error');return null;} return [...new Set(ids)]; }
   function artistLinksMarkup(item) { return artistIdsFor(item).map(id=>{const artist=getArtist(id);return artist?'<button class="text-button" data-action="open-artist" data-id="'+escapeHTML(artist.id)+'">'+escapeHTML(artist.name)+'</button>':'';}).filter(Boolean).join(' · ') || escapeHTML(item?.artist || 'artista desconocido'); }
 
   function artistForm(artist = null) {
@@ -1485,13 +1485,7 @@
   $('#settingsButton').addEventListener('click',settingsModal);
   $('#modalClose').addEventListener('click',closeModal);
   $('#globalSearch').addEventListener('input',()=>{ view='search'; renderSearch(); setNavState(); });
-  document.addEventListener('change',event=>{
-    if(event.target.matches('.artist-picker input[type="checkbox"]')) {
-      const picker=event.target.closest('.artist-picker');
-      const checked=picker.querySelectorAll('input[type="checkbox"]:checked');
-      if(checked.length>10){event.target.checked=false;toast('máximo 10 perfiles por canción o álbum.','error');}
-    }
-  });
+
   root.addEventListener('change',event=>{ if(event.target.id==='songSortSelect'){songSortMode=event.target.value;renderSongs();} });
   $('#globalSearch').addEventListener('keydown',event=>{if(event.key==='Escape'){event.target.value='';view='home';render();}});
   window.addEventListener('hashchange',()=>{openSharedRoute();render();});
@@ -1516,6 +1510,18 @@
   $('#backupFileInput').addEventListener('change',event=>{const file=event.target.files?.[0]; if(file)restoreBackup(file); event.target.value='';});
 
   modalContent.addEventListener('click',event=>{
+    const artistChoice=event.target.closest('.artist-choice');
+    if(artistChoice) {
+      const picker=artistChoice.closest('.artist-picker');
+      const isSelected=artistChoice.getAttribute('aria-pressed')==='true';
+      if(!isSelected && picker.querySelectorAll('.artist-choice[aria-pressed="true"]').length>=10) {
+        toast('máximo 10 perfiles por canción o álbum.','error');
+        return;
+      }
+      artistChoice.setAttribute('aria-pressed',String(!isSelected));
+      artistChoice.classList.toggle('is-selected',!isSelected);
+      return;
+    }
     if(event.target.closest('#chooseCoverButton')) $('#coverFileInput').click();
     if(event.target.closest('#removeCoverButton')) { pendingCover=null; removePendingCover=true; $('#coverPreview').innerHTML='<span class="cover-placeholder">♪</span>'; }
   });
