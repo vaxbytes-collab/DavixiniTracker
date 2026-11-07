@@ -128,7 +128,7 @@
     const trackRows = [];
     for (const track of tracks) {
       const audioPath = track.blob
-        ? await uploadBlob(`audio/${track.id}/audio.${extensionFor(track.fileName, 'mp3')}`, track.blob)
+        ? await uploadBlob(`audio/${track.id}/audio.${extensionFor(track.audioExtension ? 'audio.' + track.audioExtension : track.fileName, 'mp3')}`, track.blob)
         : track.audioPath || null;
       if (!audioPath) throw new Error(`falta el archivo de audio de “${track.title || 'una canción'}”.`);
       const artworkPath = track.artwork
