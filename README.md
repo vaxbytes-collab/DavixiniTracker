@@ -1,10 +1,11 @@
 # davixiniTracker
 
-Biblioteca musical personal que funciona directamente en el navegador. Permite organizar archivos de audio en álbumes y playlists, explorar por artista o género y reproducir la colección sin subir los archivos a ningún servidor.
+Plataforma pública de streaming del Davixiniverso. Cualquier visitante puede descubrir artistas, consultar sus perfiles y discografías y escuchar el catálogo; solo el administrador puede crear o editar artistas, álbumes y canciones.
 
 ## Funciones
 
 ### Biblioteca
+- Perfiles de artista independientes, con nombre y biografía, vinculados a las canciones por su nombre artístico.
 - Álbumes con portada, artista, año, género y descripción.
 - Importación múltiple de archivos de audio y lectura de etiquetas ID3 habituales.
 - Edición de título, artista, género, año y álbum de una pista.
@@ -37,11 +38,12 @@ La web usa Supabase para servir una biblioteca compartida. Los visitantes pueden
 ### Configuración inicial
 
 1. Abre **Supabase → SQL Editor → New query** y ejecuta el contenido de `supabase-setup.sql`.
-2. En **Authentication → Settings** (o la configuración del proveedor Email), desactiva **Allow new users to sign up**. Después, en **Authentication → Users**, crea tu usuario de administrador.
-3. Copia el UUID de ese usuario. En `supabase-setup.sql`, descomenta la consulta final, sustituye `PEGA-AQUI-EL-UUID-DE-TU-USUARIO` por el UUID y ejecútala en SQL Editor.
-4. Abre davixiniTracker y pulsa **acceso admin**. Inicia sesión con ese usuario.
-5. Crea álbumes e importa tus archivos desde tu navegador. Cuando termines, pulsa **publicar cambios**. A partir de ahí, la biblioteca estará disponible para visitantes.
-6. Para sustituir audio o modificar la colección, inicia sesión como administrador, realiza los cambios y vuelve a publicar.
+2. Ejecuta también `davixiniverso-artists-migration.sql` para crear la tabla segura de perfiles de artista.
+3. En **Authentication → Settings** (o la configuración del proveedor Email), desactiva **Allow new users to sign up**. Después, en **Authentication → Users**, crea tu usuario de administrador.
+4. Copia el UUID de ese usuario. En `supabase-setup.sql`, descomenta la consulta final, sustituye `PEGA-AQUI-EL-UUID-DE-TU-USUARIO` por el UUID y ejecútala en SQL Editor.
+5. Abre davixiniTracker y pulsa **acceso admin**. Inicia sesión con ese usuario.
+6. Crea álbumes e importa tus archivos desde tu navegador. Cuando termines, pulsa **publicar cambios**. A partir de ahí, la biblioteca estará disponible para visitantes.
+7. Para sustituir audio o modificar la colección, inicia sesión como administrador, realiza los cambios y vuelve a publicar.
 
 La URL del proyecto y la publishable key están en `supabase-config.js`. La publishable key está diseñada para usarse en el navegador; nunca añadas una `service_role` o secret key al repositorio. El bucket de medios es público para permitir la reproducción, así que los archivos que publiques podrán ser escuchados por cualquiera que visite la web.
 
@@ -80,7 +82,7 @@ La importación acepta MP3, M4A, AAC, OGG, OPUS, WAV, FLAC, WebM, MP4, AIFF y WM
 
 - `index.html`: interfaz y controles.
 - `styles.css`: identidad visual, tema claro/oscuro y diseño responsive.
-- `app.js`: biblioteca, reproductor, metadatos, importación y copias.
+- `app.js`: catálogo, perfiles de artista, reproductor, metadatos, importación y copias.
 - `manifest.webmanifest`: instalación PWA.
 - `sw.js`: caché de recursos de la interfaz.
 - `icon.svg`: icono de davixiniTracker.
