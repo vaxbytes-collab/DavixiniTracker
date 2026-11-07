@@ -65,12 +65,13 @@
 
   async function loadLibrary() {
     const api = requireClient();
-    const [albumResult, trackResult, playlistResult] = await Promise.all([
+    const [albumResult, trackResult, playlistResult, artistResult] = await Promise.all([
       api.from('library_albums').select('id,data,cover_path'),
       api.from('library_tracks').select('id,album_id,data,audio_path,artwork_path'),
-      api.from('library_playlists').select('id,data')
+      api.from('library_playlists').select('id,data'),
+      api.from('library_artists').select('id,data')
     ]);
-    for (const result of [albumResult, trackResult, playlistResult]) if (result.error) throw result.error;
+    for (const result of [albumResult, trackResult, playlistResult, artistResult]) if (result.error) throw result.error;
 
     const albums = await Promise.all((albumResult.data || []).map(async row => ({
       ...row.data, id: row.id, cover: row.cover_path ? await downloadBlob(row.cover_path) : null
@@ -81,7 +82,8 @@
       artwork: row.artwork_path ? await downloadBlob(row.artwork_path) : null
     })));
     const playlists = (playlistResult.data || []).map(row => ({ ...row.data, id: row.id }));
-    return { albums, tracks, playlists };
+    const artists = (artistResult.data || []).map(row => ({ ...row.data, id: row.id }));
+    return { albums, tracks, playlists, artists };
   }
 
   function extensionFor(fileName, fallback) {
@@ -110,7 +112,7 @@
     }
   }
 
-  async function publishLibrary(albums, tracks, playlists) {
+  async function publishLibrary(albums, tracks, playlists, artists = []) {
     if (!admin) throw new Error('inicia sesión como administrador para publicar cambios.');
     const api = requireClient();
 
@@ -139,6 +141,11 @@
       });
     }
 
+    const artistRows = artists.map(artist => {
+      const { id, ...data } = artist;
+      return { id, data, updated_at: new Date().toISOString() };
+    });
+
     const playlistRows = playlists.map(playlist => {
       const { id, ...data } = playlist;
       return { id, data, updated_at: new Date().toISOString() };
@@ -147,7 +154,8 @@
     for (const [table, rows] of [
       ['library_albums', albumRows],
       ['library_tracks', trackRows],
-      ['library_playlists', playlistRows]
+      ['library_playlists', playlistRows],
+      ['library_artists', artistRows]
     ]) {
       if (rows.length) {
         const { error } = await api.from(table).upsert(rows, { onConflict: 'id' });
