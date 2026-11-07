@@ -2,7 +2,7 @@
   'use strict';
 
   const DB_NAME = 'MiMusicaBiblioteca';
-  const DB_VERSION = 3;
+  const DB_VERSION = 4;
   const AUDIO_ACCEPTED = new Set(['mp3','m4a','aac','ogg','opus','wav','flac','webm','mp4','aiff','aif','wma']);
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -55,6 +55,7 @@
   let albums = [];
   let tracks = [];
   let playlists = [];
+  let artists = [];
   let view = 'home';
   let activeAlbumId = null;
   let activePlaylistId = null;
@@ -121,6 +122,7 @@
         if (!database.objectStoreNames.contains('albums')) database.createObjectStore('albums', { keyPath: 'id' });
         if (!database.objectStoreNames.contains('tracks')) database.createObjectStore('tracks', { keyPath: 'id' });
         if (!database.objectStoreNames.contains('playlists')) database.createObjectStore('playlists', { keyPath: 'id' });
+        if (!database.objectStoreNames.contains('artists')) database.createObjectStore('artists', { keyPath: 'id' });
         const tx = request.transaction;
         if (event.oldVersion < 2 && database.objectStoreNames.contains('tracks')) {
           const store = tx.objectStore('tracks');
@@ -163,31 +165,35 @@
   }
 
   async function refreshData() {
-    const tx = db.transaction(['albums','tracks','playlists'], 'readonly');
+    const tx = db.transaction(['albums','tracks','playlists','artists'], 'readonly');
     const done = transactionDone(tx);
-    const [a,t,p] = await Promise.all([
+    const [a,t,p,ar] = await Promise.all([
       requestValue(tx.objectStore('albums').getAll()),
       requestValue(tx.objectStore('tracks').getAll()),
-      requestValue(tx.objectStore('playlists').getAll())
+      requestValue(tx.objectStore('playlists').getAll()),
+      requestValue(tx.objectStore('artists').getAll())
     ]);
     await done;
     albums = a.sort((x,y) => (y.createdAt || 0) - (x.createdAt || 0));
     tracks = t;
     playlists = p.sort((x,y) => (y.createdAt || 0) - (x.createdAt || 0));
+    artists = ar.sort((x,y) => (x.name || '').localeCompare(y.name || '', 'es'));
     updateCounts();
     updateStorage();
   }
 
   async function replaceLocalLibrary(snapshot) {
-    const tx = db.transaction(['albums','tracks','playlists'], 'readwrite');
+    const tx = db.transaction(['albums','tracks','playlists','artists'], 'readwrite');
     const done = transactionDone(tx);
     const albumStore = tx.objectStore('albums');
     const trackStore = tx.objectStore('tracks');
     const playlistStore = tx.objectStore('playlists');
-    albumStore.clear(); trackStore.clear(); playlistStore.clear();
+    const artistStore = tx.objectStore('artists');
+    albumStore.clear(); trackStore.clear(); playlistStore.clear(); artistStore.clear();
     (snapshot.albums || []).forEach(item => albumStore.put(item));
     (snapshot.tracks || []).forEach(item => trackStore.put(item));
     (snapshot.playlists || []).forEach(item => playlistStore.put(item));
+    (snapshot.artists || []).forEach(item => artistStore.put(item));
     await done;
     await refreshData();
   }
@@ -225,6 +231,8 @@
     }
     const trackMap = new Map(tracks.map(item => [item.id, item]));
     for (const remote of snapshot.tracks || []) trackMap.set(remote.id, remote);
+    const artistMap = new Map(artists.map(item => [item.id, item]));
+    for (const remote of snapshot.artists || []) artistMap.set(remote.id, remote);
     const playlistMap = new Map(playlists.map(item => [item.id, item]));
     for (const remote of snapshot.playlists || []) {
       const local = playlistMap.get(remote.id);
@@ -235,13 +243,14 @@
     await replaceLocalLibrary({
       albums: [...albumMap.values()],
       tracks: [...trackMap.values()],
-      playlists: [...playlistMap.values()]
+      playlists: [...playlistMap.values()],
+      artists: [...artistMap.values()]
     });
   }
 
   async function refreshPublishedLibrary() {
     const snapshot = await window.DavixiniCloud.loadLibrary();
-    const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length;
+    const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length || snapshot.artists.length;
     if (hasRemote) await mergeLocalLibrary(snapshot);
     return Boolean(hasRemote);
   }
@@ -252,7 +261,7 @@
     button.disabled = true;
     button.textContent = 'publicando…';
     try {
-      await window.DavixiniCloud.publishLibrary(albums, tracks, playlists);
+      await window.DavixiniCloud.publishLibrary(albums, tracks, playlists, artists);
       toast('biblioteca publicada. ya está disponible para visitantes.');
     } catch (error) {
       toast('no se pudo publicar: ' + (error.message || 'error'), 'error');
@@ -266,7 +275,7 @@
     $('#albumCount').textContent = albums.length;
     $('#songCount').textContent = tracks.length;
     $('#playlistCount').textContent = playlists.length;
-    $('#artistCount').textContent = new Set(tracks.map(t => t.artist || getAlbum(t.albumId)?.artist).filter(Boolean)).size;
+    $('#artistCount').textContent = artistCollection().length;
     $('#genreCount').textContent = new Set(tracks.map(t => t.genre || getAlbum(t.albumId)?.genre).filter(Boolean)).size;
   }
 
@@ -464,7 +473,33 @@
       if (!map.has(name)) map.set(name, []);
       map.get(name).push(track);
     });
+    artists.forEach(artist => { if (artist.name && !map.has(artist.name)) map.set(artist.name, []); });
     return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'es'));
+  }
+
+  function getArtist(name) { return artists.find(item => item.name === name || item.id === name); }
+
+  function artistForm(artist = null) {
+    showModal(artist ? 'editar artista' : 'nuevo artista', 'davixiniverso', `<form id="artistForm">
+      <div class="form-field"><label for="artistName">nombre del artista *</label><input id="artistName" maxlength="100" required value="${escapeHTML(artist?.name || '')}" placeholder="nombre artístico"></div>
+      <div class="form-field"><label for="artistBio">biografía</label><textarea id="artistBio" maxlength="700" placeholder="cuenta quién es este artista">${escapeHTML(artist?.bio || '')}</textarea></div>
+      <input type="hidden" id="editingArtistId" value="${escapeHTML(artist?.id || '')}">
+      <div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">${artist ? 'guardar cambios' : 'crear artista'}</button></div>
+    </form>`);
+  }
+
+  async function saveArtistForm(event) {
+    event.preventDefault();
+    const id = $('#editingArtistId').value || uid();
+    const current = artists.find(item => item.id === id);
+    const name = $('#artistName').value.trim();
+    if (!name) return;
+    if (artists.some(item => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() && item.id !== id)) { toast('ya existe un perfil con ese nombre.', 'error'); return; }
+    const artist = { ...(current || {}), id, name, bio: $('#artistBio').value.trim(), createdAt: current?.createdAt || Date.now(), updatedAt: Date.now() };
+    try {
+      const tx = db.transaction('artists', 'readwrite'); tx.objectStore('artists').put(artist); await transactionDone(tx);
+      await refreshData(); closeModal(); activeArtist = name; view = 'artist'; render(); toast(current ? 'perfil actualizado.' : 'artista creado.');
+    } catch (error) { toast('no se pudo guardar el artista: ' + error.message, 'error'); }
   }
 
   function genreCollection() {
@@ -481,11 +516,13 @@
   function renderArtists() {
     const groups = artistCollection();
     const cards = groups.map(([name, list]) => {
+      const profile = getArtist(name);
       const initial = escapeHTML(name.slice(0,1).toUpperCase());
-      return '<button class="artist-card" data-action="open-artist" data-id="' + escapeHTML(name) + '"><span class="artist-initial">' + initial + '</span><span><strong>' + escapeHTML(name) + '</strong><small>' + list.length + (list.length===1?' canción':' canciones') + '</small></span></button>';
+      return '<button class="artist-card" data-action="open-artist" data-id="' + escapeHTML(name) + '"><span class="artist-initial">' + initial + '</span><span><strong>' + escapeHTML(name) + '</strong><small>' + list.length + (list.length===1?' canción':' canciones') + (profile?.bio ? ' · perfil' : '') + '</small></span></button>';
     }).join('');
-    root.innerHTML = pageHeader('colección','artistas','Toda la música agrupada por intérprete.') +
-      (cards ? '<div class="artist-grid">' + cards + '</div>' : emptyState('no hay artistas identificados','añade metadatos de artista a tus canciones o importa archivos con etiquetas ID3.'));
+    const action = cloudConfigured && !cloudAdmin ? '' : '<button class="button button-primary" data-action="new-artist">＋ crear artista</button>';
+    root.innerHTML = pageHeader('davixiniverso','artistas','perfiles oficiales y discografías del universo Davixini.', action) +
+      (cards ? '<div class="artist-grid">' + cards + '</div>' : emptyState('todavía no hay artistas','los perfiles que crees aparecerán aquí junto a su música.','new-artist','crear primer artista'));
     setBreadcrumb('artistas');
   }
 
@@ -502,10 +539,13 @@
 
   function renderArtistDetail() {
     const name = activeArtist;
+    const profile = getArtist(name);
     const list = tracks.filter(track => (track.artist || getAlbum(track.albumId)?.artist || '').trim() === name);
+    const actions = '<button class="button button-primary" data-action="play-artist" data-id="' + escapeHTML(name) + '">' + icon('play') + ' reproducir todo</button>' + (profile && (!cloudConfigured || cloudAdmin) ? '<button class="button button-secondary" data-action="edit-artist" data-id="' + escapeHTML(profile.id) + '">' + icon('edit') + ' editar perfil</button>' : '');
     root.innerHTML = '<button class="button button-secondary back-button" data-view="artists">← volver a artistas</button>' +
-      pageHeader('artista','',name,'<button class="button button-primary" data-action="play-artist" data-id="' + escapeHTML(name) + '">' + icon('play') + ' reproducir todo</button>').replace('<h1></h1>','<h1>' + escapeHTML(name) + '</h1>') +
-      '<div class="detail-toolbar"><h2>canciones</h2><span class="form-hint">' + list.length + ' pistas</span></div>' + trackTable(list);
+      pageHeader('davixiniverso','',name,actions).replace('<h1></h1>','<h1>' + escapeHTML(name) + '</h1>') +
+      (profile?.bio ? '<p class="artist-biography">' + escapeHTML(profile.bio) + '</p>' : '') +
+      '<div class="detail-toolbar"><h2>discografía</h2><span class="form-hint">' + list.length + ' pistas</span></div>' + trackTable(list);
     setBreadcrumb('artistas / ' + name);
   }
 
@@ -1267,6 +1307,8 @@
       return;
     }
     if(action==='new-album') albumForm();
+    else if(action==='new-artist') artistForm();
+    else if(action==='edit-artist') artistForm(artists.find(item => item.id === id));
     else if(action==='play-all-shuffle') { const mix=tracks.filter(track=>track.blob).sort(()=>Math.random()-.5); startQueue(mix); }
     else if(action==='new-playlist') playlistForm();
     else if(action==='open-album') { activeAlbumId=id; view='album'; render(); }
@@ -1406,6 +1448,7 @@
       const trackToAdd=event.target.dataset.addTrack;
       savePlaylistForm(event).then(async()=>{if(trackToAdd){const created=playlists[0];if(created)await appendTrackToPlaylist(trackToAdd,created.id);}});
     } else if(event.target.id==='trackForm') saveTrackForm(event);
+    else if(event.target.id==='artistForm') saveArtistForm(event);
   });
 
 
@@ -1568,7 +1611,7 @@
           const state = await window.DavixiniCloud.init();
           cloudAdmin = state.admin;
           const snapshot = await window.DavixiniCloud.loadLibrary();
-          const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length;
+          const hasRemote = snapshot.albums.length || snapshot.tracks.length || snapshot.playlists.length || snapshot.artists.length;
           if (hasRemote) {
             if (cloudAdmin) {
               if (!tracks.length || confirm('hay una biblioteca publicada en supabase. ¿cargar esa versión en este navegador?')) {
