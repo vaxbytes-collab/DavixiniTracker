@@ -116,10 +116,11 @@
     const url = preparedUrl;
     // Congela la pista entrante en el instante exacto en que termina la mezcla.
     const resumeAt = nextAudio.currentTime;
-    nextAudio.pause();
     const targetVolume = masterVolume;
     nextAudio.volume = targetVolume;
     try {
+      // no cortes la pista entrante antes de que el reproductor principal
+      // confirme que ya cargó, buscó la posición y empezó a reproducirla.
       await window.DavixiniPlayback.commitCrossfade(plan.index,plan.id,url,resumeAt,targetVolume);
       nextAudio.pause();
       nextAudio.removeAttribute('src');
