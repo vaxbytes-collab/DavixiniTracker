@@ -95,7 +95,7 @@
     const remaining = Number.isFinite(audio.duration) ? audio.duration - audio.currentTime : crossfadeSettings.duration;
     // La duración configurada es la duración real de la mezcla; no la acortes
     // por unos milisegundos de retraso del evento timeupdate.
-    activeFadeDuration = crossfadeSettings.duration;
+    activeFadeDuration = Math.min(crossfadeSettings.duration, Math.max(0.05, remaining));
     fading = true;
     window.__davixiniCrossfadeActive = true;
     fadeStartedAt = performance.now();
