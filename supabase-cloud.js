@@ -76,11 +76,14 @@
     const albums = await Promise.all((albumResult.data || []).map(async row => ({
       ...row.data, id: row.id, cover: row.cover_path ? await downloadBlob(row.cover_path) : null
     })));
-    const tracks = await Promise.all((trackResult.data || []).map(async row => ({
-      ...row.data, id: row.id, albumId: row.album_id,
-      blob: await downloadBlob(row.audio_path),
-      artwork: row.artwork_path ? await downloadBlob(row.artwork_path) : null
-    })));
+    const tracks = await Promise.all((trackResult.data || []).map(async row => {
+      const { favorite, lastPlayedAt, playCount, playSeconds, notes, ...data } = row.data || {};
+      return {
+        ...data, id: row.id, albumId: row.album_id,
+        blob: await downloadBlob(row.audio_path),
+        artwork: row.artwork_path ? await downloadBlob(row.artwork_path) : null
+      };
+    }));
     const playlists = (playlistResult.data || []).map(row => ({ ...row.data, id: row.id }));
     const artists = (artistResult.data || []).map(row => ({ ...row.data, id: row.id }));
     return { albums, tracks, playlists, artists };
