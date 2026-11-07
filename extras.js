@@ -114,7 +114,9 @@
     if(fadeTimer){clearInterval(fadeTimer);fadeTimer=null;}
     const plan = prepared;
     const url = preparedUrl;
-    // Congela la pista entrante en el instante exacto en que termina la mezcla.
+    // Congela la pista entrante al terminar la mezcla para que su posición
+    // no siga avanzando mientras el reproductor principal hace el relevo.
+    nextAudio.pause();
     const resumeAt = nextAudio.currentTime;
     const targetVolume = masterVolume;
     nextAudio.volume = targetVolume;
