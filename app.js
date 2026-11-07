@@ -1178,6 +1178,13 @@
         }
         updatePlayer();
         await audio.play();
+        // Algunos navegadores pueden reiniciar la posición al arrancar el
+        // elemento principal después de cambiar su src. Reafirma el punto
+        // exacto donde terminó la mezcla, incluso después de play().
+        if(Math.abs(audio.currentTime-resumeTime)>0.12) {
+          await seekAndWait(resumeTime,url);
+          if(audio.paused) await audio.play();
+        }
         // Mantén protegida la nueva pista justo después del relevo por si el
         // navegador entrega tarde el ended que pertenecía al recurso anterior.
         window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 4000;
