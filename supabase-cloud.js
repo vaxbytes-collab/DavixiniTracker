@@ -134,7 +134,7 @@
       const artworkPath = track.artwork
         ? await uploadBlob(`artwork/${track.id}/cover.${extensionFor(track.artwork.name, 'jpg')}`, track.artwork)
         : track.artworkPath || null;
-      const { blob, artwork, ...data } = track;
+      const { blob, artwork, notes, favorite, lastPlayedAt, playCount, playSeconds, ...data } = track;
       trackRows.push({
         id: track.id, album_id: track.albumId || null, data,
         audio_path: audioPath, artwork_path: artworkPath, updated_at: new Date().toISOString()
