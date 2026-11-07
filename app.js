@@ -425,13 +425,14 @@
 
   function renderSongs() {
     const sorted = [...tracks].sort((a,b)=>{
-      if(songSortMode==='artist') return (a.artist||getAlbum(a.albumId)?.artist||'').localeCompare(b.artist||getAlbum(b.albumId)?.artist||'', 'es') || a.title.localeCompare(b.title,'es');
+      if(songSortMode==='artist') return artistNameForTrack(a).localeCompare(artistNameForTrack(b), 'es') || a.title.localeCompare(b.title,'es');
+      if(songSortMode==='plays') return (b.playCount||0)-(a.playCount||0) || a.title.localeCompare(b.title,'es');
       if(songSortMode==='album') return (getAlbum(a.albumId)?.title||'').localeCompare(getAlbum(b.albumId)?.title||'', 'es') || a.title.localeCompare(b.title,'es');
       if(songSortMode==='recent') return (b.addedAt||0)-(a.addedAt||0);
       if(songSortMode==='duration') return (b.duration||0)-(a.duration||0);
       return (a.title||'').localeCompare(b.title||'', 'es');
     });
-    const sortControl = '<select class="sort-select" id="songSortSelect" aria-label="Ordenar canciones"><option value="title">título</option><option value="artist">artista</option><option value="album">álbum</option><option value="recent">recientes</option><option value="duration">duración</option></select>';
+    const sortControl = '<select class="sort-select" id="songSortSelect" aria-label="Ordenar canciones"><option value="title">título</option><option value="artist">artista</option><option value="album">álbum</option><option value="recent">recientes</option><option value="duration">duración</option><option value="plays">más escuchadas</option></select>';
     root.innerHTML = pageHeader('biblioteca','canciones',tracks.length + ' canciones en tu colección.', '<button class="button button-primary" data-action="import-audio">' + icon('upload') + ' importar música</button>') +
       '<div class="detail-toolbar"><h2>todas las canciones</h2>' + sortControl + '</div>' + trackTable(sorted,{emptyTitle:'no hay canciones',emptyDescription:'importa archivos MP3 u otros formatos de audio compatibles con tu navegador.'});
     const selector=$('#songSortSelect'); if(selector) selector.value=songSortMode;
@@ -593,8 +594,8 @@
   function renderSearch() {
     const query = $('#globalSearch').value.trim().toLocaleLowerCase();
     if (!query) { view='home'; render(); return; }
-    const matchingAlbums = albums.filter(a=>`${a.title} ${a.artist||''} ${a.genre||''}`.toLocaleLowerCase().includes(query));
-    const matchingTracks = tracks.filter(t=>`${t.title} ${t.artist||''} ${t.genre||''} ${t.fileName||''} ${getAlbum(t.albumId)?.title||''} ${getAlbum(t.albumId)?.genre||''}`.toLocaleLowerCase().includes(query));
+    const matchingAlbums = albums.filter(a=>`${a.title} ${artistNameForAlbum(a)} ${a.genre||''}`.toLocaleLowerCase().includes(query));
+    const matchingTracks = tracks.filter(t=>`${t.title} ${artistNameForTrack(t)} ${t.genre||''} ${t.fileName||''} ${t.lyrics||''} ${getAlbum(t.albumId)?.title||''} ${getAlbum(t.albumId)?.genre||''}`.toLocaleLowerCase().includes(query));
     const matchingPlaylists = playlists.filter(p=>`${p.name} ${p.description||''}`.toLocaleLowerCase().includes(query));
     const matchingArtists = artistCollection().filter(([name])=>name.toLocaleLowerCase().includes(query));
     root.innerHTML = `${pageHeader('búsqueda',`resultados para “${escapeHTML(query)}”`,`${matchingArtists.length} artistas · ${matchingAlbums.length} álbumes · ${matchingTracks.length} canciones · ${matchingPlaylists.length} playlists`,'')}
@@ -1660,10 +1661,10 @@
   audio.addEventListener('ended',()=>{
     flushListenProgress();
     if(window.__davixiniCrossfadeActive) return;
-    if(performance.now() < (window.__davixiniCrossfadeSuppressEndedUntil || 0)) return;
     // Un ended atrasado de la pista previa puede llegar cuando ya se está
     // reproduciendo la nueva; solo avanza si la fuente actual sí llegó al final.
     if(Number.isFinite(audio.duration) && audio.duration>0 && audio.currentTime<audio.duration-0.35) return;
+    if(performance.now() < (window.__davixiniCrossfadeSuppressEndedUntil || 0)) return;
     if(repeatMode==='one'){audio.currentTime=0;audio.play().catch(()=>{});}else nextTrack(1);
   });
   audio.addEventListener('error',()=>{if(audio.src)toast('el navegador no puede reproducir este archivo.','error');});
