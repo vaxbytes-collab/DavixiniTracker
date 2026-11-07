@@ -494,10 +494,15 @@
   }
 
   function getArtist(name) { return artists.find(item => item.name === name || item.id === name); }
-  function artistNameForTrack(track) { const profile = track?.artistId ? getArtist(track.artistId) : null; return (profile?.name || track?.artist || getAlbum(track?.albumId)?.artist || '').trim(); }
-  function artistNameForAlbum(album) { const profile = album?.artistId ? getArtist(album.artistId) : null; return (profile?.name || album?.artist || '').trim(); }
-  function tracksForArtist(name) { const profile=getArtist(name); return tracks.filter(track => profile ? track.artistId===profile.id || (!track.artistId && artistNameForTrack(track)===profile.name) : artistNameForTrack(track)===name); }
-  function albumsForArtist(name) { const profile=getArtist(name); return albums.filter(album => profile ? album.artistId===profile.id || (!album.artistId && artistNameForAlbum(album)===profile.name) : artistNameForAlbum(album)===name); }
+  function artistIdsFor(item) { const ids = Array.isArray(item?.artistIds) ? item.artistIds : (item?.artistId ? [item.artistId] : []); return [...new Set(ids.filter(id => artists.some(profile => profile.id === id)))].slice(0,10); }
+  function artistNamesFor(item) { return artistIdsFor(item).map(id=>getArtist(id)?.name).filter(Boolean); }
+  function artistNameForTrack(track) { return artistNamesFor(track).join(', ') || (track?.artist || getAlbum(track?.albumId)?.artist || '').trim(); }
+  function artistNameForAlbum(album) { return artistNamesFor(album).join(', ') || (album?.artist || '').trim(); }
+  function tracksForArtist(name) { const profile=getArtist(name); return tracks.filter(track => profile ? artistIdsFor(track).includes(profile.id) || (!track.artistId && !track.artistIds?.length && artistNameForTrack(track)===profile.name) : artistNameForTrack(track)===name); }
+  function albumsForArtist(name) { const profile=getArtist(name); return albums.filter(album => profile ? artistIdsFor(album).includes(profile.id) || (!album.artistId && !album.artistIds?.length && artistNameForAlbum(album)===profile.name) : artistNameForAlbum(album)===name); }
+  function artistOptionsMarkup(selectedIds=[]) { const selected=new Set(selectedIds); return artists.map(a=>'<option value="'+escapeHTML(a.id)+'" '+(selected.has(a.id)?'selected':'')+'>'+escapeHTML(a.name)+'</option>').join(''); }
+  function selectedArtistIds(selector) { const ids=[...$(selector).selectedOptions].map(option=>option.value).filter(Boolean); if(ids.length>10){toast('puedes atribuir como máximo 10 perfiles.', 'error');return null;} return [...new Set(ids)]; }
+  function artistLinksMarkup(item) { return artistIdsFor(item).map(id=>{const artist=getArtist(id);return artist?'<button class="text-button" data-action="open-artist" data-id="'+escapeHTML(artist.id)+'">'+escapeHTML(artist.name)+'</button>':'';}).filter(Boolean).join(' · ') || escapeHTML(item?.artist || 'artista desconocido'); }
 
   function artistForm(artist = null) {
     showModal(artist ? 'editar artista' : 'nuevo artista', 'davixiniverso', `<form id="artistForm">
@@ -517,18 +522,28 @@
     if (artists.some(item => item.name.toLocaleLowerCase() === name.toLocaleLowerCase() && item.id !== id)) { toast('ya existe un perfil con ese nombre.', 'error'); return; }
     const artist = { ...(current || {}), id, name, bio: $('#artistBio').value.trim(), createdAt: current?.createdAt || Date.now(), updatedAt: Date.now() };
     try {
+      const [allTracks, allAlbums] = await Promise.all([
+        requestValue(db.transaction('tracks','readonly').objectStore('tracks').getAll()),
+        requestValue(db.transaction('albums','readonly').objectStore('albums').getAll())
+      ]);
       const tx = db.transaction(['artists','tracks','albums'], 'readwrite');
+      const trackStore=tx.objectStore('tracks'), albumStore=tx.objectStore('albums');
       tx.objectStore('artists').put(artist);
-      {
-        const trackStore = tx.objectStore('tracks');
-        const albumStore = tx.objectStore('albums');
-        const [allTracks, allAlbums] = await Promise.all([requestValue(trackStore.getAll()), requestValue(albumStore.getAll())]);
-        const linkName = (current?.name || name).toLocaleLowerCase();
-        allTracks.filter(track => track.artistId === id || (!track.artistId && (track.artist || '').trim().toLocaleLowerCase() === linkName)).forEach(track => trackStore.put({ ...track, artistId:id, artist:name }));
-        allAlbums.filter(album => album.artistId === id || (!album.artistId && (album.artist || '').trim().toLocaleLowerCase() === linkName)).forEach(album => albumStore.put({ ...album, artistId:id, artist:name }));
-      }
+      const oldName=(current?.name || name).toLocaleLowerCase();
+      allTracks.forEach(track=>{
+        const ids=Array.isArray(track.artistIds)?track.artistIds:(track.artistId?[track.artistId]:[]);
+        if(ids.includes(id) || (!track.artistId && !track.artistIds?.length && (track.artist||'').trim().toLocaleLowerCase()===oldName)) {
+          const nextIds=ids.length?ids:[id]; trackStore.put({...track,artistIds:nextIds,artistId:nextIds[0],artist:nextIds.map(pid=>pid===id?name:(artists.find(a=>a.id===pid)?.name||'')).filter(Boolean).join(', ')});
+        }
+      });
+      allAlbums.forEach(album=>{
+        const ids=Array.isArray(album.artistIds)?album.artistIds:(album.artistId?[album.artistId]:[]);
+        if(ids.includes(id) || (!album.artistId && !album.artistIds?.length && (album.artist||'').trim().toLocaleLowerCase()===oldName)) {
+          const nextIds=ids.length?ids:[id]; albumStore.put({...album,artistIds:nextIds,artistId:nextIds[0],artist:nextIds.map(pid=>pid===id?name:(artists.find(a=>a.id===pid)?.name||'')).filter(Boolean).join(', ')});
+        }
+      });
       await transactionDone(tx);
-      await refreshData(); closeModal(); activeArtist = name; view = 'artist'; render(); toast(current ? 'perfil actualizado.' : 'artista creado.');
+      await refreshData(); closeModal(); activeArtist = id; view = 'artist'; render(); toast(current ? 'perfil actualizado.' : 'artista creado.');
     } catch (error) { toast('no se pudo guardar el artista: ' + error.message, 'error'); }
   }
 
