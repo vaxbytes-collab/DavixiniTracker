@@ -233,7 +233,17 @@
         : remote);
     }
     const trackMap = new Map(tracks.map(item => [item.id, item]));
-    for (const remote of snapshot.tracks || []) trackMap.set(remote.id, remote);
+    for (const remote of snapshot.tracks || []) {
+      const local = trackMap.get(remote.id);
+      trackMap.set(remote.id, local ? {
+        ...local, ...remote,
+        favorite: Boolean(local.favorite || remote.favorite),
+        lastPlayedAt: Math.max(local.lastPlayedAt || 0, remote.lastPlayedAt || 0),
+        playCount: Math.max(local.playCount || 0, remote.playCount || 0),
+        playSeconds: Math.max(local.playSeconds || 0, remote.playSeconds || 0),
+        notes: local.notes || ''
+      } : remote);
+    }
     const artistMap = new Map(artists.map(item => [item.id, item]));
     for (const remote of snapshot.artists || []) artistMap.set(remote.id, remote);
     const playlistMap = new Map(playlists.map(item => [item.id, item]));
@@ -451,7 +461,7 @@
     if (!album) { view='albums'; render(); return; }
     const list = tracksForAlbum(album);
     root.innerHTML = `<button class="button button-secondary back-button" data-view="albums">← volver a álbumes</button>
-      <section class="album-hero">${coverMarkup(album)}<div class="album-hero-copy"><p class="page-kicker">álbum</p><h1>${escapeHTML(album.title)}</h1><p class="artist">${escapeHTML(artistNameForAlbum(album) || 'artista desconocido')}</p>${album.description ? `<p class="description">${escapeHTML(album.description)}</p>` : ''}<div class="album-details">${[album.year,album.genre,`${list.length} ${list.length===1?'canción':'canciones'}`].filter(Boolean).map(escapeHTML).join(' · ')} · añadido ${formatDate(album.createdAt)}</div>
+      <section class="album-hero">${coverMarkup(album)}<div class="album-hero-copy"><p class="page-kicker">álbum</p><h1>${escapeHTML(album.title)}</h1><p class="artist"><button class="text-button" data-action="open-artist" data-id="${escapeHTML(artistNameForAlbum(album))}">${escapeHTML(artistNameForAlbum(album) || 'artista desconocido')}</button></p>${album.description ? `<p class="description">${escapeHTML(album.description)}</p>` : ''}<div class="album-details">${[album.year,album.genre,`${list.length} ${list.length===1?'canción':'canciones'}`].filter(Boolean).map(escapeHTML).join(' · ')} · añadido ${formatDate(album.createdAt)}</div>
         <div class="inline-actions"><button class="button button-primary" data-action="play-album" data-id="${escapeHTML(album.id)}" ${list.length?'':'disabled'}>${icon('play')} reproducir</button><button class="button button-secondary" data-action="share-album" data-id="${escapeHTML(album.id)}">${icon('arrow')} compartir</button><button class="button button-secondary" data-action="add-to-album" data-id="${escapeHTML(album.id)}">${icon('plus')} añadir música</button><button class="button button-secondary" data-action="edit-album" data-id="${escapeHTML(album.id)}">${icon('edit')} editar</button><button class="button button-danger" data-action="delete-album" data-id="${escapeHTML(album.id)}">${icon('trash')} eliminar</button></div></div></section>
       <div class="detail-toolbar"><h2>canciones</h2><span class="form-hint">arrastra el símbolo ⠿ para ordenar; en móvil usa el menú de cada canción.</span></div>
       ${trackTable(list,{sortType:'album',sortId:album.id,emptyTitle:'este álbum está vacío',emptyDescription:'añade archivos de audio desde tu dispositivo o arrástralos hasta esta página.',emptyAction:'add-to-album-current',emptyButton:'añadir música'})}
@@ -509,12 +519,13 @@
     try {
       const tx = db.transaction(['artists','tracks','albums'], 'readwrite');
       tx.objectStore('artists').put(artist);
-      if (current && current.name !== name) {
+      {
         const trackStore = tx.objectStore('tracks');
         const albumStore = tx.objectStore('albums');
         const [allTracks, allAlbums] = await Promise.all([requestValue(trackStore.getAll()), requestValue(albumStore.getAll())]);
-        allTracks.filter(track => track.artistId === id || (!track.artistId && (track.artist || '').trim() === current.name)).forEach(track => trackStore.put({ ...track, artistId:id, artist:name }));
-        allAlbums.filter(album => album.artistId === id || (!album.artistId && (album.artist || '').trim() === current.name)).forEach(album => albumStore.put({ ...album, artistId:id, artist:name }));
+        const linkName = (current?.name || name).toLocaleLowerCase();
+        allTracks.filter(track => track.artistId === id || (!track.artistId && (track.artist || '').trim().toLocaleLowerCase() === linkName)).forEach(track => trackStore.put({ ...track, artistId:id, artist:name }));
+        allAlbums.filter(album => album.artistId === id || (!album.artistId && (album.artist || '').trim().toLocaleLowerCase() === linkName)).forEach(album => albumStore.put({ ...album, artistId:id, artist:name }));
       }
       await transactionDone(tx);
       await refreshData(); closeModal(); activeArtist = name; view = 'artist'; render(); toast(current ? 'perfil actualizado.' : 'artista creado.');
@@ -547,9 +558,8 @@
 
   function renderGenres() {
     const groups = genreCollection();
-    const cards = groups.map(([name, list], index) => {
-      const hue = (index * 47 + 330) % 360;
-      return '<button class="genre-card" style="background:linear-gradient(125deg, hsla(' + hue + ',78%,54%,.18), hsla(' + ((hue+90)%360) + ',75%,52%,.17)),var(--surface)" data-action="open-genre" data-id="' + escapeHTML(name) + '"><span><strong>' + escapeHTML(name) + '</strong><small>' + list.length + (list.length===1?' canción':' canciones') + '</small></span></button>';
+    const cards = groups.map(([name, list]) => {
+      return '<button class="genre-card" data-action="open-genre" data-id="' + escapeHTML(name) + '"><span><strong>' + escapeHTML(name) + '</strong><small>' + list.length + (list.length===1?' canción':' canciones') + '</small></span></button>';
     }).join('');
     root.innerHTML = pageHeader('colección','géneros','Explora tu biblioteca por sonido.') +
       (cards ? '<div class="genre-grid">' + cards + '</div>' : emptyState('todavía no hay géneros','edita una canción o un álbum para asignarle un género.'));
@@ -769,8 +779,10 @@
       const duplicate = tracks.some(track=>track.albumId===albumId && track.fileName===file.name && (track.size||track.blob?.size)===file.size);
       if (duplicate) { duplicates++; continue; }
       const meta = await parseId3(file);
+      const importedArtist = (meta.artist || artistNameForAlbum(targetAlbum) || '').trim();
+      const importedProfile = artists.find(profile => profile.id === targetAlbum.artistId && (!meta.artist || meta.artist.trim().toLocaleLowerCase() === profile.name.toLocaleLowerCase())) || artists.find(profile => profile.name.toLocaleLowerCase() === importedArtist.toLocaleLowerCase());
       const track = {
-        id:uid(), albumId, title:meta.title || titleFromFile(file.name), artist:meta.artist || '',
+        id:uid(), albumId, title:meta.title || titleFromFile(file.name), artist:importedArtist, artistId:importedProfile?.id || null,
         albumName:meta.album || '', year:meta.year || '', genre:meta.genre || '',
         fileName:file.name, mimeType:file.type || 'audio/mpeg', size:file.size, blob:file,
         artwork:meta.artwork, duration:0, favorite:false, addedAt:Date.now(), lastPlayedAt:0
@@ -1620,6 +1632,10 @@
       const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').put({...track,duration:audio.duration});tx.oncomplete=()=>refreshData().catch(()=>{});
     }
   });
+  function flushListenProgress() {
+    const track=getTrack(lastStatsTrackId); if(!track) return;
+    const tx=db.transaction('tracks','readwrite'); tx.objectStore('tracks').put({...track});
+  }
   function recordListenProgress() {
     const id=currentTrackId(); if(!id || audio.paused) return;
     const now=audio.currentTime;
@@ -1640,7 +1656,9 @@
       $('#fullPlayerSeekBar').value=progress;
     }
   });
+  audio.addEventListener('pause',flushListenProgress);
   audio.addEventListener('ended',()=>{
+    flushListenProgress();
     if(window.__davixiniCrossfadeActive) return;
     if(performance.now() < (window.__davixiniCrossfadeSuppressEndedUntil || 0)) return;
     // Un ended atrasado de la pista previa puede llegar cuando ya se está
