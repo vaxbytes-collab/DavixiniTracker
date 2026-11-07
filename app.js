@@ -1228,7 +1228,7 @@
     $('#elapsedTime').textContent=formatTime(audio.currentTime||0);
     $('#totalTime').textContent=formatTime(audio.duration||track?.duration||0);
     if(!Number.isFinite(audio.duration)||audio.duration<=0) $('#seekBar').value=0;
-    $('#viewRoot [data-track-row]').forEach(row=>row.classList.toggle('is-playing',row.dataset.trackRow===id));
+    $$('#viewRoot [data-track-row]').forEach(row=>row.classList.toggle('is-playing',row.dataset.trackRow===id));
     updateFullPlayer(track,album,artwork);
   }
 
@@ -1577,7 +1577,7 @@
     if (!row || row.dataset.sortType !== draggedSortType || row.dataset.sortId !== draggedSortId) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    $('.track-row.drop-target', root).forEach(item => item.classList.remove('drop-target','drop-target-after'));
+    $$('.track-row.drop-target', root).forEach(item => item.classList.remove('drop-target','drop-target-after'));
     if (row.dataset.trackRow !== draggedTrackId) {
       const rect = row.getBoundingClientRect();
       row.classList.add('drop-target');
