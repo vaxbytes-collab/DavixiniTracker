@@ -5,7 +5,8 @@ Plataforma pública de streaming del Davixiniverso. Cualquier visitante puede de
 ## Funciones
 
 ### Biblioteca
-- Perfiles de artista independientes, con nombre y biografía; las canciones y álbumes pueden vincularse mediante un ID de perfil estable y mantienen compatibilidad con bibliotecas antiguas.
+- Perfiles de artista independientes, con nombre y biografía. Cada canción y álbum puede atribuirse a un máximo de **10 perfiles**; los enlaces usan IDs estables y mantienen compatibilidad con bibliotecas antiguas.
+- Los selectores de atribución permiten seleccionar varios perfiles con Ctrl (o ⌘ en Mac). Las discografías de cada perfil incluyen todas las canciones y álbumes en los que participa.
 - Álbumes con portada, artista, año, género y descripción.
 - Importación múltiple de archivos de audio y lectura de etiquetas ID3 habituales.
 - Edición de título, artista, género, año y álbum de una pista.
