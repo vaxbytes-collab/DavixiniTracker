@@ -1485,6 +1485,13 @@
   $('#settingsButton').addEventListener('click',settingsModal);
   $('#modalClose').addEventListener('click',closeModal);
   $('#globalSearch').addEventListener('input',()=>{ view='search'; renderSearch(); setNavState(); });
+  document.addEventListener('change',event=>{
+    if(event.target.matches('.artist-picker input[type="checkbox"]')) {
+      const picker=event.target.closest('.artist-picker');
+      const checked=picker.querySelectorAll('input[type="checkbox"]:checked');
+      if(checked.length>10){event.target.checked=false;toast('máximo 10 perfiles por canción o álbum.','error');}
+    }
+  });
   root.addEventListener('change',event=>{ if(event.target.id==='songSortSelect'){songSortMode=event.target.value;renderSongs();} });
   $('#globalSearch').addEventListener('keydown',event=>{if(event.key==='Escape'){event.target.value='';view='home';render();}});
   window.addEventListener('hashchange',()=>{openSharedRoute();render();});
