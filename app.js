@@ -63,6 +63,9 @@
   let activeGenre = null;
   let songSortMode = 'title';
   let replacementTrackId = null;
+  let lastStatsTrackId = null;
+  let lastStatsTime = 0;
+  let lastStatsPersistAt = 0;
   let queue = [];
   let queueIndex = -1;
   let shuffle = false;
@@ -384,12 +387,13 @@
   function renderHome() {
     const latestAlbums = [...albums].slice(0,6);
     const latestTracks = [...tracks].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).slice(0,6);
+    const mostPlayed = [...tracks].filter(track=>(track.playCount||0)>0).sort((a,b)=>(b.playCount||0)-(a.playCount||0)).slice(0,5);
     root.innerHTML = `<section class="home-hero">
         <div class="home-hero-copy">
           <p class="home-hero-eyebrow">DAVIXINITRACKER <span>·</span> DAVIXINIVERSO</p>
           <h1>un universo.<br><span>muchos artistas.</span></h1>
           <p class="home-hero-description">descubre artistas, explora sus discografías y escucha toda la música del universo Davixini desde un solo lugar.</p>
-          <div class="home-hero-actions"><button class="button button-primary" data-action="play-all-shuffle">${icon('shuffle')} escuchar algo</button><button class="button button-secondary" data-action="new-album">${icon('plus')} crear álbum</button></div>
+          <div class="home-hero-actions"><button class="button button-primary" data-action="play-all-shuffle">${icon('shuffle')} escuchar algo</button><button class="button button-secondary" data-action="wrapped">mi resumen musical</button><button class="button button-secondary" data-action="new-album">${icon('plus')} crear álbum</button></div>
           <div class="home-hero-meta"><span><i></i> ${cloudConfigured ? 'biblioteca compartida' : 'biblioteca local'}</span><span>${tracks.length} pistas</span><span>${albums.length} álbumes</span></div>
         </div>
         <div class="home-hero-art" aria-hidden="true"><div class="hero-orbit hero-orbit-one"></div><div class="hero-orbit hero-orbit-two"></div><div class="hero-record"><div class="hero-record-label">♫</div></div><span class="hero-note hero-note-one">♪</span><span class="hero-note hero-note-two">♫</span><span class="hero-art-caption">PLAY IT YOUR WAY</span></div>
@@ -398,7 +402,8 @@
       <section class="section-block">${sectionHeading('álbumes', `${albums.length} en tu biblioteca`, `<button class="text-button" data-view="albums">ver todos ${icon('arrow')}</button>`)}
         ${albums.length ? `<div class="album-grid">${latestAlbums.map(albumCard).join('')}</div>` : emptyState('tu biblioteca está vacía','crea un álbum o importa algunas canciones para empezar.','new-album','crear primer álbum')}
       </section>
-      ${latestTracks.length ? `<section class="section-block">${sectionHeading('añadidas recientemente','Las últimas canciones que importaste', `<button class="text-button" data-view="songs">ver canciones ${icon('arrow')}</button>`)}${trackTable(latestTracks,{compact:true})}</section>` : ''}`;
+      ${latestTracks.length ? `<section class="section-block">${sectionHeading('añadidas recientemente','Las últimas canciones que importaste', `<button class="text-button" data-view="songs">ver canciones ${icon('arrow')}</button>`)}${trackTable(latestTracks,{compact:true})}</section>` : ''}
+      ${mostPlayed.length ? '<section class="section-block">'+sectionHeading('más escuchadas','según las reproducciones de este navegador')+trackTable(mostPlayed,{compact:true})+'</section>' : ''}`;
     setBreadcrumb('inicio');
   }
 
@@ -581,11 +586,13 @@
     const matchingAlbums = albums.filter(a=>`${a.title} ${a.artist||''} ${a.genre||''}`.toLocaleLowerCase().includes(query));
     const matchingTracks = tracks.filter(t=>`${t.title} ${t.artist||''} ${t.genre||''} ${t.fileName||''} ${getAlbum(t.albumId)?.title||''} ${getAlbum(t.albumId)?.genre||''}`.toLocaleLowerCase().includes(query));
     const matchingPlaylists = playlists.filter(p=>`${p.name} ${p.description||''}`.toLocaleLowerCase().includes(query));
-    root.innerHTML = `${pageHeader('búsqueda',`resultados para “${query}”`,`${matchingAlbums.length} álbumes · ${matchingTracks.length} canciones · ${matchingPlaylists.length} playlists`,'')}
+    const matchingArtists = artistCollection().filter(([name])=>name.toLocaleLowerCase().includes(query));
+    root.innerHTML = `${pageHeader('búsqueda',`resultados para “${escapeHTML(query)}”`,`${matchingArtists.length} artistas · ${matchingAlbums.length} álbumes · ${matchingTracks.length} canciones · ${matchingPlaylists.length} playlists`,'')}
+      ${matchingArtists.length?'<section class="section-block">'+sectionHeading('artistas')+'<div class="artist-grid">'+matchingArtists.map(([name,list])=>'<button class="artist-card" data-action="open-artist" data-id="'+escapeHTML(name)+'"><span class="artist-initial">'+escapeHTML(name.slice(0,1).toUpperCase())+'</span><span><strong>'+escapeHTML(name)+'</strong><small>'+list.length+' canciones</small></span></button>').join('')+'</div></section>':''}
       ${matchingAlbums.length?`<section class="section-block">${sectionHeading('álbumes') }<div class="album-grid">${matchingAlbums.map(albumCard).join('')}</div></section>`:''}
       ${matchingPlaylists.length?`<section class="section-block">${sectionHeading('playlists')}<div class="playlist-grid">${matchingPlaylists.map(playlistCard).join('')}</div></section>`:''}
       ${matchingTracks.length?`<section class="section-block">${sectionHeading('canciones')}${trackTable(matchingTracks)}</section>`:''}
-      ${!matchingAlbums.length&&!matchingTracks.length&&!matchingPlaylists.length?emptyState('sin resultados','no se encontraron coincidencias en tu biblioteca.'):''}`;
+      ${!matchingArtists.length&&!matchingAlbums.length&&!matchingTracks.length&&!matchingPlaylists.length?emptyState('sin resultados','no se encontraron coincidencias en tu biblioteca.'):''}`;
     setBreadcrumb('búsqueda');
   }
 
@@ -1029,7 +1036,8 @@
     audio.src=currentObjectUrl;
     audio.playbackRate=playbackRate;
     audio.play().then(()=>updatePlayer()).catch(()=>toast('el navegador no pudo reproducir este formato.','error'));
-    const updated={...track,lastPlayedAt:Date.now()};
+    const updated={...track,lastPlayedAt:Date.now(),playCount:(track.playCount||0)+1};
+    lastStatsTrackId=track.id; lastStatsTime=0; lastStatsPersistAt=Date.now();
     const tx=db.transaction('tracks','readwrite'); tx.objectStore('tracks').put(updated); tx.oncomplete=()=>{refreshData().catch(()=>{});};
     updatePlayer();
   }
@@ -1119,6 +1127,7 @@
       try {
         // al cambiar el src puede quedar encolado el evento ended del audio anterior.
         // lo ignoramos durante el relevo para que no reinicie ni avance la pista nueva.
+        window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 4000;
         audio.pause();
         queueIndex=index;
         window.__davixiniCurrentTrackId=id;
@@ -1132,14 +1141,14 @@
         const track=getTrack(id);
         if(track) {
           const tx=db.transaction('tracks','readwrite');
-          tx.objectStore('tracks').put({...track,lastPlayedAt:Date.now()});
+          tx.objectStore('tracks').put({...track,lastPlayedAt:Date.now(),playCount:(track.playCount||0)+1});
           tx.oncomplete=()=>refreshData().catch(()=>{});
         }
         updatePlayer();
         await audio.play();
         // Mantén protegida la nueva pista justo después del relevo por si el
         // navegador entrega tarde el ended que pertenecía al recurso anterior.
-        window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 1200;
+        window.__davixiniCrossfadeSuppressEndedUntil = performance.now() + 4000;
         if(previousUrl && previousUrl!==url) URL.revokeObjectURL(previousUrl);
         updatePlayer();
         return true;
@@ -1303,6 +1312,27 @@
     catch(error) { toast(`no se pudo vaciar la biblioteca: ${error.message}`,'error'); }
   }
 
+  function showWrapped() {
+    const ranked=[...tracks].filter(t=>(t.playCount||0)>0).sort((a,b)=>(b.playCount||0)-(a.playCount||0)).slice(0,5);
+    const plays=tracks.reduce((sum,t)=>sum+(t.playCount||0),0);
+    const seconds=tracks.reduce((sum,t)=>sum+(t.playSeconds||0),0);
+    showModal('tu resumen musical','davixini wrapped · datos de este navegador','<div class="stats-row"><div class="stat-card"><strong>'+plays+'</strong><span>reproducciones</span></div><div class="stat-card"><strong>'+Math.round(seconds/60)+'</strong><span>minutos escuchados</span></div><div class="stat-card"><strong>'+ranked.length+'</strong><span>canciones en el top</span></div></div><h3>tus canciones más escuchadas</h3>'+(ranked.length?'<div class="modal-list">'+ranked.map((t,i)=>'<div class="modal-list-item"><b>#'+(i+1)+'</b><span><strong>'+escapeHTML(t.title)+'</strong><small>'+escapeHTML(artistNameForTrack(t)||'artista desconocido')+'</small></span><span>'+(t.playCount||0)+' plays</span></div>').join('')+'</div>':'<p class="form-hint">todavía no hay suficientes reproducciones. escucha música y tu resumen irá tomando forma.</p>')+'<p class="form-hint">estadísticas locales: no representan a todos los visitantes ni se envían a supabase.</p>');
+  }
+  async function shareEntity(kind,id,title) {
+    const url=new URL(location.href); url.hash=kind+'='+encodeURIComponent(id);
+    try { if(navigator.share) await navigator.share({title,url:url.toString()}); else if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url.toString());toast('enlace copiado.');} else toast('tu navegador no permite compartir desde aquí.','error'); }
+    catch(error){if(error?.name!=='AbortError')toast('no se pudo compartir el enlace.','error');}
+  }
+  function openSharedRoute() {
+    const params=new URLSearchParams(location.hash.replace(/^#/,''));
+    if(params.has('artist')){const p=getArtist(decodeURIComponent(params.get('artist')));if(p){activeArtist=p.name;view='artist';return;}}
+    if(params.has('album')){const a=getAlbum(decodeURIComponent(params.get('album')));if(a){activeAlbumId=a.id;view='album';return;}}
+    if(params.has('track')){const t=getTrack(decodeURIComponent(params.get('track')));if(t){queue=[t.id];queueIndex=0;view='songs';toast('canción compartida: pulsa reproducir para escucharla.');}}
+  }
+  function showTrackLyrics(trackId) {
+    const track=getTrack(trackId); if(!track?.lyrics?.trim()){toast('esta canción todavía no tiene letra guardada.');return;}
+    showModal(track.title,'letra de la canción','<div class="lyrics-display">'+escapeHTML(track.lyrics).replace(/\r?\n/g,'<br>')+'</div>');
+  }
   function showTrackActions(trackId) {
     const track=getTrack(trackId); if(!track) return;
     const inPlaylist = view==='playlist' && activePlaylistId && (getPlaylist(activePlaylistId)?.trackIds||[]).includes(trackId);
@@ -1315,17 +1345,23 @@
     if(view==='playlist' && activePlaylistId && (getPlaylist(activePlaylistId)?.trackIds||[]).includes(trackId)) {
       extra += `<button class="button button-secondary" data-action="move-track-up" data-id="${escapeHTML(trackId)}">↑ subir posición</button><button class="button button-secondary" data-action="move-track-down" data-id="${escapeHTML(trackId)}">↓ bajar posición</button>`;
     }
-    showModal(track.title,'acciones de canción', `<div class="settings-actions" style="display:grid;grid-template-columns:1fr 1fr"><button class="button button-secondary" data-action="replace-audio" data-id="${escapeHTML(track.id)}">${icon('replace')} sustituir archivo</button><button class="button button-secondary" data-action="download-track" data-id="${escapeHTML(track.id)}">${icon('download')} descargar archivo</button><button class="button button-secondary" data-action="duplicate-track" data-id="${escapeHTML(track.id)}">duplicar canción</button><button class="button button-secondary" data-action="edit-track" data-id="${escapeHTML(track.id)}">${icon('edit')} editar datos</button><button class="button button-secondary" data-action="add-to-playlist" data-id="${escapeHTML(track.id)}">${icon('list')} añadir a playlist</button><button class="button button-secondary" data-action="toggle-favorite" data-id="${escapeHTML(track.id)}">${icon(track.favorite?'heartFilled':'heart')} ${track.favorite?'quitar favorito':'añadir favorito'}</button><button class="button button-secondary" data-action="play-next" data-id="${escapeHTML(track.id)}">reproducir a continuación</button>${extra}<button class="button button-danger" data-action="delete-track" data-id="${escapeHTML(track.id)}">${icon('trash')} eliminar canción</button></div><div class="modal-footer"><button class="button button-secondary" data-modal-close>cerrar</button></div>`);
+    showModal(track.title,'acciones de canción', `<div class="settings-actions" style="display:grid;grid-template-columns:1fr 1fr"><button class="button button-secondary" data-action="share-track" data-id="${escapeHTML(track.id)}">${icon('arrow')} compartir enlace</button>${track.lyrics?.trim()?'<button class="button button-secondary" data-action="show-lyrics" data-id="'+escapeHTML(track.id)+'">▤ ver letra</button>':''}<button class="button button-secondary" data-action="queue-add" data-id="${escapeHTML(track.id)}">＋ añadir a la cola</button><button class="button button-secondary" data-action="replace-audio" data-id="${escapeHTML(track.id)}">${icon('replace')} sustituir archivo</button><button class="button button-secondary" data-action="download-track" data-id="${escapeHTML(track.id)}">${icon('download')} descargar archivo</button><button class="button button-secondary" data-action="duplicate-track" data-id="${escapeHTML(track.id)}">duplicar canción</button><button class="button button-secondary" data-action="edit-track" data-id="${escapeHTML(track.id)}">${icon('edit')} editar datos</button><button class="button button-secondary" data-action="add-to-playlist" data-id="${escapeHTML(track.id)}">${icon('list')} añadir a playlist</button><button class="button button-secondary" data-action="toggle-favorite" data-id="${escapeHTML(track.id)}">${icon(track.favorite?'heartFilled':'heart')} ${track.favorite?'quitar favorito':'añadir favorito'}</button><button class="button button-secondary" data-action="play-next" data-id="${escapeHTML(track.id)}">reproducir a continuación</button>${extra}<button class="button button-danger" data-action="delete-track" data-id="${escapeHTML(track.id)}">${icon('trash')} eliminar canción</button></div><div class="modal-footer"><button class="button button-secondary" data-modal-close>cerrar</button></div>`);
   }
 
   async function handleAction(button) {
     const {action,id}=button.dataset;
-    const visitorActions = new Set(['play-all-shuffle','open-album','open-playlist','open-artist','open-genre','play-artist','play-genre','play-album','play-playlist','play-track','download-track','play-next','queue-play','queue-remove','queue-move-up','queue-move-down','queue-clear']);
+    const visitorActions = new Set(['play-all-shuffle','open-album','open-playlist','open-artist','open-genre','play-artist','play-genre','play-album','play-playlist','play-track','download-track','play-next','queue-add','queue-play','queue-remove','queue-move-up','queue-move-down','queue-clear','wrapped','share-artist','share-album','share-track','show-lyrics']);
     if (cloudConfigured && !cloudAdmin && !visitorActions.has(action)) {
       toast('solo el administrador puede modificar la biblioteca.');
       return;
     }
     if(action==='new-album') albumForm();
+    else if(action==='wrapped') showWrapped();
+    else if(action==='share-artist') { const p=getArtist(id); shareEntity('artist',p?.id||id,(p?.name||id)+' · davixiniTracker'); }
+    else if(action==='share-album') { const a=getAlbum(id); if(a) shareEntity('album',a.id,a.title+' · davixiniTracker'); }
+    else if(action==='share-track') { const t=getTrack(id); if(t){const url=new URL(location.href);url.hash='track='+encodeURIComponent(t.id);if(navigator.share)navigator.share({title:t.title,url:url.toString()}).catch(()=>{});else navigator.clipboard?.writeText(url.toString()).then(()=>toast('enlace copiado.')).catch(()=>toast('no se pudo copiar el enlace.','error'));} }
+    else if(action==='show-lyrics') showTrackLyrics(id);
+    else if(action==='queue-add') { if(!queue.includes(id)) queue.push(id); closeModal(); toast('canción añadida al final de la cola.'); updatePlayer(); }
     else if(action==='new-artist') artistForm();
     else if(action==='edit-artist') artistForm(artists.find(item => item.id === id));
     else if(action==='play-all-shuffle') { const mix=tracks.filter(track=>track.blob).sort(()=>Math.random()-.5); startQueue(mix); }
@@ -1392,7 +1428,7 @@
   // Navegación global y acciones delegadas.
   document.addEventListener('click', event => {
     const viewButton=event.target.closest('[data-view]');
-    if(viewButton) { view=viewButton.dataset.view; activeAlbumId=null; activePlaylistId=null; render(); return; }
+    if(viewButton) { view=viewButton.dataset.view; activeAlbumId=null; activePlaylistId=null; if(location.hash) history.replaceState(null,'',location.pathname+location.search); render(); return; }
     const actionButton=event.target.closest('[data-action]');
     if(actionButton) { handleAction(actionButton); return; }
     if(event.target.closest('[data-modal-close]') || event.target===backdrop) closeModal();
@@ -1419,6 +1455,8 @@
   $('#globalSearch').addEventListener('input',()=>{ view='search'; renderSearch(); setNavState(); });
   root.addEventListener('change',event=>{ if(event.target.id==='songSortSelect'){songSortMode=event.target.value;renderSongs();} });
   $('#globalSearch').addEventListener('keydown',event=>{if(event.key==='Escape'){event.target.value='';view='home';render();}});
+  window.addEventListener('hashchange',()=>{openSharedRoute();render();});
+  window.addEventListener('davixini-library-updated',async()=>{try{await refreshData();render();}catch(error){toast('no se pudieron actualizar los datos: '+error.message,'error');}});
   $('#coverFileInput').addEventListener('change',event=>{
     const file=event.target.files?.[0]; if(!file) return;
     if(!file.type.startsWith('image/')) {toast('elige una imagen válida.','error');return;}
@@ -1581,7 +1619,18 @@
       const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').put({...track,duration:audio.duration});tx.oncomplete=()=>refreshData().catch(()=>{});
     }
   });
+  function recordListenProgress() {
+    const id=currentTrackId(); if(!id || audio.paused) return;
+    const now=audio.currentTime;
+    if(id!==lastStatsTrackId){lastStatsTrackId=id;lastStatsTime=now;lastStatsPersistAt=Date.now();return;}
+    const delta=now-lastStatsTime; lastStatsTime=now;
+    if(delta<=0 || delta>5) return;
+    const track=getTrack(id); if(!track) return;
+    track.playSeconds=(track.playSeconds||0)+delta;
+    if(Date.now()-lastStatsPersistAt>=12000){lastStatsPersistAt=Date.now();const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').put({...track});}
+  }
   audio.addEventListener('timeupdate',()=>{
+    recordListenProgress();
     $('#elapsedTime').textContent=formatTime(audio.currentTime);
     $('#fullPlayerElapsed').textContent=formatTime(audio.currentTime);
     if(Number.isFinite(audio.duration)&&audio.duration>0) {
@@ -1658,6 +1707,7 @@
       const savedSpeed=Number(localStorage.getItem('mi-musica-speed')||1);
       playbackRate=Number.isFinite(savedSpeed)&&savedSpeed>=0.5&&savedSpeed<=2?savedSpeed:1;
       audio.playbackRate=playbackRate;
+      openSharedRoute();
       render();
       if(navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
       if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('./sw.js').catch(()=>{});
