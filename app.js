@@ -229,7 +229,7 @@
     for (const remote of snapshot.albums || []) {
       const local = albumMap.get(remote.id);
       albumMap.set(remote.id, local
-        ? { ...local, ...remote, trackIds: [...new Set([...(remote.trackIds || []), ...(local.trackIds || [])])] }
+        ? { ...local, ...remote, cover: remote.cover || local.cover || null, trackIds: [...new Set([...(remote.trackIds || []), ...(local.trackIds || [])])] }
         : remote);
     }
     const trackMap = new Map(tracks.map(item => [item.id, item]));
@@ -237,6 +237,8 @@
       const local = trackMap.get(remote.id);
       trackMap.set(remote.id, local ? {
         ...local, ...remote,
+        blob: remote.blob || local.blob || null,
+        artwork: remote.artwork || local.artwork || null,
         favorite: Boolean(local.favorite || remote.favorite),
         lastPlayedAt: Math.max(local.lastPlayedAt || 0, remote.lastPlayedAt || 0),
         playCount: Math.max(local.playCount || 0, remote.playCount || 0),
@@ -1779,11 +1781,21 @@
           if (hasRemote) {
             if (cloudAdmin) {
               if (!tracks.length || confirm('hay una biblioteca publicada en supabase. ¿cargar esa versión en este navegador?')) {
+                const localTracks = new Map(tracks.map(track => [track.id, track]));
+                snapshot.tracks = snapshot.tracks.map(track => {
+                  const local = localTracks.get(track.id);
+                  return local && !track.blob ? { ...track, blob: local.blob || null, artwork: track.artwork || local.artwork || null } : track;
+                });
                 await replaceLocalLibrary(snapshot);
               }
             } else {
               await mergeLocalLibrary(snapshot);
             }
+          }
+          if (snapshot.warnings?.length) {
+            const shown = snapshot.warnings.slice(0, 3).join('; ');
+            const extra = snapshot.warnings.length > 3 ? ' y ' + (snapshot.warnings.length - 3) + ' más' : '';
+            toast('biblioteca cargada, pero hubo ' + snapshot.warnings.length + ' fallo(s) de descarga: ' + shown + extra, 'error');
           }
           updateCloudControls();
         } catch (cloudError) {
