@@ -973,3 +973,8 @@ body { background: #090909 !important; color: var(--text); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
   outline-color: #eee;
 }
+
+
+/* Davixiniverso: perfiles de artista */
+.artist-biography{max-width:760px;margin:10px 0 26px;color:var(--muted);line-height:1.75;font-size:14px}
+.visitor-mode [data-action="new-artist"],.visitor-mode [data-action="edit-artist"]{display:none!important}
