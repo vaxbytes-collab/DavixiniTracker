@@ -462,7 +462,7 @@
     if (!album) { view='albums'; render(); return; }
     const list = tracksForAlbum(album);
     root.innerHTML = `<button class="button button-secondary back-button" data-view="albums">← volver a álbumes</button>
-      <section class="album-hero">${coverMarkup(album)}<div class="album-hero-copy"><p class="page-kicker">álbum</p><h1>${escapeHTML(album.title)}</h1><p class="artist"><button class="text-button" data-action="open-artist" data-id="${escapeHTML(artistNameForAlbum(album))}">${escapeHTML(artistNameForAlbum(album) || 'artista desconocido')}</button></p>${album.description ? `<p class="description">${escapeHTML(album.description)}</p>` : ''}<div class="album-details">${[album.year,album.genre,`${list.length} ${list.length===1?'canción':'canciones'}`].filter(Boolean).map(escapeHTML).join(' · ')} · añadido ${formatDate(album.createdAt)}</div>
+      <section class="album-hero">${coverMarkup(album)}<div class="album-hero-copy"><p class="page-kicker">álbum</p><h1>${escapeHTML(album.title)}</h1><p class="artist">${artistLinksMarkup(album)}</p>${album.description ? `<p class="description">${escapeHTML(album.description)}</p>` : ''}<div class="album-details">${[album.year,album.genre,`${list.length} ${list.length===1?'canción':'canciones'}`].filter(Boolean).map(escapeHTML).join(' · ')} · añadido ${formatDate(album.createdAt)}</div>
         <div class="inline-actions"><button class="button button-primary" data-action="play-album" data-id="${escapeHTML(album.id)}" ${list.length?'':'disabled'}>${icon('play')} reproducir</button><button class="button button-secondary" data-action="share-album" data-id="${escapeHTML(album.id)}">${icon('arrow')} compartir</button><button class="button button-secondary" data-action="add-to-album" data-id="${escapeHTML(album.id)}">${icon('plus')} añadir música</button><button class="button button-secondary" data-action="edit-album" data-id="${escapeHTML(album.id)}">${icon('edit')} editar</button><button class="button button-danger" data-action="delete-album" data-id="${escapeHTML(album.id)}">${icon('trash')} eliminar</button></div></div></section>
       <div class="detail-toolbar"><h2>canciones</h2><span class="form-hint">arrastra el símbolo ⠿ para ordenar; en móvil usa el menú de cada canción.</span></div>
       ${trackTable(list,{sortType:'album',sortId:album.id,emptyTitle:'este álbum está vacío',emptyDescription:'añade archivos de audio desde tu dispositivo o arrástralos hasta esta página.',emptyAction:'add-to-album-current',emptyButton:'añadir música'})}
@@ -485,10 +485,9 @@
   function artistCollection() {
     const map = new Map();
     tracks.forEach(track => {
-      const name = artistNameForTrack(track);
-      if (!name) return;
-      if (!map.has(name)) map.set(name, []);
-      map.get(name).push(track);
+      const names = artistNamesFor(track);
+      if (!names.length) { const fallback=artistNameForTrack(track); if(!fallback)return; if(!map.has(fallback))map.set(fallback,[]); map.get(fallback).push(track); return; }
+      names.forEach(name=>{if(!map.has(name))map.set(name,[]);map.get(name).push(track);});
     });
     artists.forEach(artist => { if (artist.name && !map.has(artist.name)) map.set(artist.name, []); });
     return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'es'));
@@ -570,8 +569,8 @@
   function renderArtistDetail() {
     const profile = getArtist(activeArtist);
     const name = profile?.name || activeArtist;
-    const list = tracksForArtist(name);
-    const artistAlbums = albumsForArtist(name);
+    const list = profile ? tracksForArtist(profile.id) : tracksForArtist(name);
+    const artistAlbums = profile ? albumsForArtist(profile.id) : albumsForArtist(name);
     const actions = '<button class="button button-primary" data-action="play-artist" data-id="' + escapeHTML(name) + '">' + icon('play') + ' reproducir todo</button><button class="button button-secondary" data-action="share-artist" data-id="' + escapeHTML(profile?.id || name) + '">' + icon('arrow') + ' compartir perfil</button>' + (profile && (!cloudConfigured || cloudAdmin) ? '<button class="button button-secondary" data-action="edit-artist" data-id="' + escapeHTML(profile.id) + '">' + icon('edit') + ' editar perfil</button>' : '');
     root.innerHTML = '<button class="button button-secondary back-button" data-view="artists">← volver a artistas</button>' +
       pageHeader('davixiniverso','',name,actions).replace('<h1></h1>','<h1>' + escapeHTML(name) + '</h1>') +
@@ -655,7 +654,7 @@
     showModal(album?'editar álbum':'nuevo álbum','detalles del álbum', `<form id="albumForm">
       <div class="form-grid">
         <div class="form-field full"><label for="albumTitle">nombre del álbum *</label><input id="albumTitle" name="title" maxlength="100" required value="${escapeHTML(album?.title||'')}" placeholder="nombre del álbum"></div>
-        <div class="form-field"><label for="albumArtist">artista (nombre libre)</label><input id="albumArtist" name="artist" maxlength="100" value="${escapeHTML(album?.artist||'')}" placeholder="artista o grupo"></div><div class="form-field"><label for="albumArtistProfile">vincular perfil</label><select id="albumArtistProfile"><option value="">sin perfil vinculado</option>${artists.map(a=>'<option value="'+escapeHTML(a.id)+'" '+((album?.artistId===a.id || (!album?.artistId && album?.artist===a.name))?'selected':'')+'>'+escapeHTML(a.name)+'</option>').join('')}</select></div>
+        <div class="form-field"><label for="albumArtist">artista (nombre libre)</label><input id="albumArtist" name="artist" maxlength="100" value="${escapeHTML(album?.artist||'')}" placeholder="artista o grupo"></div><div class="form-field full"><label for="albumArtistProfiles">perfiles atribuidos (máximo 10)</label><select id="albumArtistProfiles" multiple size="${Math.max(2,Math.min(artists.length,5))}">${artistOptionsMarkup(artistIdsFor(album).length?artistIdsFor(album):(album?.artistId?[album.artistId]:artists.filter(a=>a.name===album?.artist).map(a=>a.id)))}</select><p class="form-hint">usa ctrl (o ⌘ en mac) para seleccionar varios perfiles.</p></div>
         <div class="form-field"><label for="albumYear">año</label><input id="albumYear" name="year" inputmode="numeric" maxlength="4" value="${escapeHTML(album?.year||'')}" placeholder="2026"></div>
         <div class="form-field full"><label for="albumGenre">género</label><input id="albumGenre" name="genre" maxlength="60" value="${escapeHTML(album?.genre||'')}" placeholder="género musical"></div>
         <div class="form-field full"><label for="albumDescription">descripción</label><textarea id="albumDescription" name="description" maxlength="500" placeholder="opcional">${escapeHTML(album?.description||'')}</textarea></div>
@@ -672,7 +671,7 @@
 
   function trackForm(track) {
     const album = albumForTrack(track);
-    showModal('editar canción','metadatos de la pista', `<form id="trackForm"><div class="form-grid"><div class="form-field full"><label for="trackTitle">título *</label><input id="trackTitle" required maxlength="160" value="${escapeHTML(track.title)}"></div><div class="form-field"><label for="trackArtist">artista (nombre libre)</label><input id="trackArtist" maxlength="120" value="${escapeHTML(track.artist||'')}"></div><div class="form-field"><label for="trackArtistProfile">vincular perfil</label><select id="trackArtistProfile"><option value="">sin perfil vinculado</option>${artists.map(a=>'<option value="'+escapeHTML(a.id)+'" '+((track.artistId===a.id || (!track.artistId && track.artist===a.name))?'selected':'')+'>'+escapeHTML(a.name)+'</option>').join('')}</select></div><div class="form-field"><label for="trackGenre">género</label><input id="trackGenre" maxlength="60" value="${escapeHTML(track.genre||'')}" placeholder="género"></div><div class="form-field"><label for="trackYear">año</label><input id="trackYear" maxlength="4" inputmode="numeric" value="${escapeHTML(track.year||'')}"></div><div class="form-field"><label for="trackAlbum">álbum</label><select id="trackAlbum"><option value="">sin álbum</option>${albums.map(a=>`<option value="${escapeHTML(a.id)}" ${a.id===track.albumId?'selected':''}>${escapeHTML(a.title)}</option>`).join('')}</select></div></div><p class="form-hint">audio guardado · ${formatBytes(track.size||track.blob?.size||0)}</p><input type="hidden" id="editingTrackId" value="${escapeHTML(track.id)}"><div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">guardar cambios</button></div></form>`);
+    showModal('editar canción','metadatos de la pista', `<form id="trackForm"><div class="form-grid"><div class="form-field full"><label for="trackTitle">título *</label><input id="trackTitle" required maxlength="160" value="${escapeHTML(track.title)}"></div><div class="form-field"><label for="trackArtist">artista (nombre libre)</label><input id="trackArtist" maxlength="120" value="${escapeHTML(track.artist||'')}"></div><div class="form-field full"><label for="trackArtistProfiles">perfiles atribuidos (máximo 10)</label><select id="trackArtistProfiles" multiple size="${Math.max(2,Math.min(artists.length,5))}">${artistOptionsMarkup(artistIdsFor(track).length?artistIdsFor(track):(track.artistId?[track.artistId]:artists.filter(a=>a.name===track.artist).map(a=>a.id)))}</select><p class="form-hint">usa ctrl (o ⌘ en mac) para seleccionar varios perfiles.</p></div><div class="form-field"><label for="trackGenre">género</label><input id="trackGenre" maxlength="60" value="${escapeHTML(track.genre||'')}" placeholder="género"></div><div class="form-field"><label for="trackYear">año</label><input id="trackYear" maxlength="4" inputmode="numeric" value="${escapeHTML(track.year||'')}"></div><div class="form-field"><label for="trackAlbum">álbum</label><select id="trackAlbum"><option value="">sin álbum</option>${albums.map(a=>`<option value="${escapeHTML(a.id)}" ${a.id===track.albumId?'selected':''}>${escapeHTML(a.title)}</option>`).join('')}</select></div></div><p class="form-hint">audio guardado · ${formatBytes(track.size||track.blob?.size||0)}</p><input type="hidden" id="editingTrackId" value="${escapeHTML(track.id)}"><div class="modal-footer"><button type="button" class="button button-secondary" data-modal-close>cancelar</button><button type="submit" class="button button-primary">guardar cambios</button></div></form>`);
   }
 
   function chooseAlbumForImport() {
@@ -783,7 +782,7 @@
       const importedArtist = (meta.artist || artistNameForAlbum(targetAlbum) || '').trim();
       const importedProfile = artists.find(profile => profile.id === targetAlbum.artistId && (!meta.artist || meta.artist.trim().toLocaleLowerCase() === profile.name.toLocaleLowerCase())) || artists.find(profile => profile.name.toLocaleLowerCase() === importedArtist.toLocaleLowerCase());
       const track = {
-        id:uid(), albumId, title:meta.title || titleFromFile(file.name), artist:importedArtist, artistId:importedProfile?.id || null,
+        id:uid(), albumId, title:meta.title || titleFromFile(file.name), artist:targetAlbum.artist || importedArtist, artistIds:Array.isArray(targetAlbum.artistIds)?targetAlbum.artistIds:(targetAlbum.artistId?[targetAlbum.artistId]:(importedProfile?.id?[importedProfile.id]:[])), artistId:(Array.isArray(targetAlbum.artistIds)?targetAlbum.artistIds[0]:targetAlbum.artistId) || importedProfile?.id || null,
         albumName:meta.album || '', year:meta.year || '', genre:meta.genre || '',
         fileName:file.name, mimeType:file.type || 'audio/mpeg', size:file.size, blob:file,
         artwork:meta.artwork, duration:0, favorite:false, addedAt:Date.now(), lastPlayedAt:0
@@ -817,9 +816,9 @@
     const current = getAlbum(id);
     const title = $('#albumTitle').value.trim();
     if (!title) return;
-    const selectedArtist = artists.find(item => item.id === $('#albumArtistProfile').value);
+    const selectedIds = selectedArtistIds('#albumArtistProfiles'); if(selectedIds===null)return; const selectedArtists=selectedIds.map(getArtist).filter(Boolean); const primaryArtist=selectedArtists[0];
     const album = {
-      ...(current||{}), id, title, artist:selectedArtist?.name || $('#albumArtist').value.trim(), artistId:selectedArtist?.id || null, year:$('#albumYear').value.trim(),
+      ...(current||{}), id, title, artist:selectedArtists.map(a=>a.name).join(', ') || $('#albumArtist').value.trim(), artistIds:selectedIds, artistId:primaryArtist?.id || null, year:$('#albumYear').value.trim(),
       genre:$('#albumGenre').value.trim(), description:$('#albumDescription').value.trim(),
       cover:removePendingCover ? null : (pendingCover || current?.cover || null), trackIds:current?.trackIds || [], createdAt:current?.createdAt || Date.now(), updatedAt:Date.now()
     };
@@ -849,8 +848,8 @@
     const track = getTrack(id);
     if (!track) return;
     const targetAlbumId = $('#trackAlbum').value || null;
-    const selectedArtist = artists.find(item => item.id === $('#trackArtistProfile').value);
-    const updated = {...track,title:$('#trackTitle').value.trim(),artist:selectedArtist?.name || $('#trackArtist').value.trim(),artistId:selectedArtist?.id || null,genre:$('#trackGenre').value.trim(),year:$('#trackYear').value.trim(),albumId:targetAlbumId};
+    const selectedIds = selectedArtistIds('#trackArtistProfiles'); if(selectedIds===null)return; const selectedArtists=selectedIds.map(getArtist).filter(Boolean); const primaryArtist=selectedArtists[0];
+    const updated = {...track,title:$('#trackTitle').value.trim(),artist:selectedArtists.map(a=>a.name).join(', ') || $('#trackArtist').value.trim(),artistIds:selectedIds,artistId:primaryArtist?.id || null,genre:$('#trackGenre').value.trim(),year:$('#trackYear').value.trim(),albumId:targetAlbumId};
     if (!updated.title) return;
     try {
       const tx = db.transaction(['tracks','albums'],'readwrite');
