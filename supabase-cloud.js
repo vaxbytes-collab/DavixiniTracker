@@ -90,7 +90,7 @@
   }
 
   function extensionFor(fileName, fallback) {
-    const match = String(fileName || '').match(/\\.([a-z0-9]{2,6})$/i);
+    const match = String(fileName || '').match(/\.([a-z0-9]{2,6})$/i);
     return (match?.[1] || fallback || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
   }
 
