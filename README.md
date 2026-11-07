@@ -98,4 +98,4 @@ El nombre de marca cambió de Mi música a davixiniTracker, pero se conserva el 
 
 ### Estadísticas y privacidad
 
-Las reproducciones y el tiempo escuchado se guardan por pista en el navegador que los registra. El resumen musical no representa las escuchas de todos los visitantes ni transmite hábitos personales a Supabase. Los enlaces compartidos abren el perfil o álbum correspondiente; los enlaces de canción preparan la pista sin forzar la reproducción automática.
+Las reproducciones, favoritos, notas personales y el tiempo escuchado se guardan por pista en el navegador que los registra; esos datos no se publican en Supabase. El resumen musical no representa las escuchas de todos los visitantes ni transmite hábitos personales a Supabase. Los enlaces compartidos abren el perfil o álbum correspondiente; los enlaces de canción preparan la pista sin forzar la reproducción automática.
