@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+Sitemap: https://vaxbytes-collab.github.io/DavixiniTracker/sitemap.xml
