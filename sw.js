@@ -1,15 +1,13 @@
-const CACHE_NAME = 'davixini-tracker-shell-v37';
-const SHELL = ['./', './index.html', './styles.css?v=17', './app.js?v=26', './supabase-config.js', './supabase-cloud.js?v=2', './manifest.webmanifest','./extras.js?v=22', './icon.svg?v=10'];
-self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
-});
-self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))).then(() => self.clients.claim()));
-});
-self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-    if (response.ok) { const copy = response.clone(); caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)); }
-    return response;
-  }).catch(() => caches.match('./index.html'))));
+const V = 'dt-v2';
+const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'supabase-config.js', 'manifest.webmanifest', 'icon.svg'];
+self.addEventListener('install', e => e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())));
+self.addEventListener('activate', e => e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== V).map(x => caches.delete(x)))).then(() => self.clients.claim())));
+self.addEventListener('fetch', e => {
+  const r = e.request, u = new URL(r.url);
+  if (r.method !== 'GET' || u.origin !== location.origin || u.pathname.includes('admin')) return;
+  e.respondWith(caches.open(V).then(async c => {
+    const hit = await c.match(r);
+    const net = fetch(r).then(res => { if (res.ok) c.put(r, res.clone()); return res; }).catch(() => hit || c.match('index.html'));
+    return hit || net;
+  }));
 });

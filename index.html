@@ -1,168 +1,53 @@
 <!doctype html>
-<html lang="es" data-theme="dark">
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#090909">
-  <meta name="description" content="El hogar musical del Davixiniverso: artistas, discografías y canciones.">
-  <meta name="google-site-verification" content="CUzBkj9r5Rlb0arR5-WMaefe9Z3sVEmcw8puXCGtUJ0" />
-  <title>davixiniTracker · el Davixiniverso</title>
-  <link rel="icon" href="./icon.svg?v=10" type="image/svg+xml">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=17">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Música del Davixiniverso: artistas, álbumes y canciones.">
+<meta name="google-site-verification" content="CUzBkj9r5Rlb0arR5-WMaefe9Z3sVEmcw8puXCGtUJ0">
+<meta property="og:title" content="davixiniTracker">
+<meta property="og:description" content="Música del Davixiniverso: artistas, álbumes y canciones.">
+<meta property="og:type" content="website">
+<title>davixiniTracker</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="Navegación">
-      <a class="brand" href="#inicio" aria-label="davixiniTracker, inicio">
-        <span class="brand-mark" aria-hidden="true"><img src="./icon.svg?v=10" alt=""></span>
-        <span class="brand-copy"><strong>davixini<span>Tracker</span></strong><small>sonido en orden.</small></span>
-      </a>
-
-      <div class="side-group">
-        <p class="side-label">biblioteca</p>
-        <nav class="nav-list" id="mainNav">
-          <button class="nav-item active" data-view="home"><span class="nav-icon" data-icon="home"></span><span>inicio</span></button>
-          <button class="nav-item" data-view="albums"><span class="nav-icon" data-icon="albums"></span><span>álbumes</span><span class="nav-count" id="albumCount">0</span></button>
-          <button class="nav-item" data-view="songs"><span class="nav-icon" data-icon="music"></span><span>canciones</span><span class="nav-count" id="songCount">0</span></button>
-          <button class="nav-item" data-view="playlists"><span class="nav-icon" data-icon="list"></span><span>playlists</span><span class="nav-count" id="playlistCount">0</span></button>
-          <button class="nav-item" data-view="artists"><span class="nav-icon" data-icon="artist"></span><span>artistas</span><span class="nav-count" id="artistCount">0</span></button>
-          <button class="nav-item" data-view="genres"><span class="nav-icon" data-icon="wave"></span><span>géneros</span><span class="nav-count" id="genreCount">0</span></button>
-        </nav>
-      </div>
-
-      <div class="side-group">
-        <p class="side-label">tu colección</p>
-        <nav class="nav-list">
-          <button class="nav-item" data-view="favorites"><span class="nav-icon" data-icon="heart"></span><span>favoritos</span></button>
-          <button class="nav-item" data-view="recent"><span class="nav-icon" data-icon="clock"></span><span>reproducidas</span></button>
-        </nav>
-      </div>
-
-      <div class="sidebar-bottom">
-        <div class="storage-card">
-          <div class="storage-head"><span class="storage-dot"></span><span>almacenamiento</span></div>
-          <strong id="storageUsed">calculando…</strong>
-          <p>este navegador conserva una copia de la biblioteca.</p>
-          <div class="storage-bar"><span id="storageBar"></span></div>
-        </div>
-        <button class="nav-item settings-link" id="settingsButton"><span class="nav-icon" data-icon="settings"></span><span>ajustes y copias</span></button>
-      </div>
-    </aside>
-
-    <main class="main-area">
-      <header class="topbar">
-        <div class="breadcrumb" id="breadcrumb">biblioteca <span>/</span> inicio</div>
-        <div class="topbar-actions">
-          <label class="search-box" for="globalSearch"><span data-icon="search"></span><input id="globalSearch" type="search" placeholder="buscar canciones, álbumes…" autocomplete="off"><kbd>Ctrl K</kbd></label>
-          <button class="icon-button theme-button" id="themeToggle" aria-label="Cambiar tema" title="Cambiar tema"><span data-icon="sun"></span></button>
-          <button class="button button-secondary" id="adminAccessButton">acceso admin</button>
-          <button class="button button-primary" id="publishCloudButton" hidden>publicar cambios</button>
-          <button class="button button-secondary" id="importTop"><span data-icon="upload"></span><span>importar música</span></button>
-          <button class="button button-primary" id="createAlbumTop"><span data-icon="plus"></span><span>nuevo álbum</span></button>
-        </div>
-      </header>
-
-      <div id="viewRoot" class="view-root" aria-live="polite"></div>
-    </main>
-  </div>
-
-  <nav class="mobile-nav" aria-label="Navegación móvil">
-    <button class="mobile-nav-item active" data-view="home"><span data-icon="home"></span><small>inicio</small></button>
-    <button class="mobile-nav-item" data-view="albums"><span data-icon="albums"></span><small>álbumes</small></button>
-    <button class="mobile-nav-item" data-view="songs"><span data-icon="music"></span><small>canciones</small></button>
-    <button class="mobile-nav-item" data-view="playlists"><span data-icon="list"></span><small>playlists</small></button>
-    <button class="mobile-nav-item" data-view="favorites"><span data-icon="heart"></span><small>favoritos</small></button>
-    <button class="mobile-nav-item" data-view="artists"><span data-icon="artist"></span><small>artistas</small></button>
-    <button class="mobile-nav-item" data-view="genres"><span data-icon="wave"></span><small>géneros</small></button>
+<header class="top">
+  <a class="logo" href="#/">davixiniTracker</a>
+  <nav id="nav" aria-label="Navegación">
+    <a href="#/songs" data-p="songs">Canciones</a>
+    <a href="#/albums" data-p="albums">Álbumes</a>
+    <a href="#/artists" data-p="artists">Artistas</a>
+    <a href="#/likes" data-p="likes">Me gusta</a>
   </nav>
-
-  <footer class="player" id="player">
-    <div class="player-track">
-      <div class="artwork artwork-small" id="playerArtwork"><span class="artwork-placeholder">♪</span></div>
-      <div class="player-track-copy"><strong id="playerTrackTitle">nada reproduciéndose</strong><span id="playerTrackArtist">elige una canción</span></div>
-      <button class="icon-button favorite-current" id="favoriteCurrent" aria-label="Añadir a favoritos" title="Añadir a favoritos" disabled><span data-icon="heart"></span></button>
+  <input id="q" type="search" placeholder="Buscar ( / )" aria-label="Buscar">
+</header>
+<main id="view"><p class="sub">Cargando…</p></main>
+<footer class="player" id="player" hidden>
+  <div class="now"><div class="pa" id="pArt"></div><div><b id="pTitle"></b><span id="pArtist"></span></div></div>
+  <div class="mid">
+    <div class="ctl">
+      <button id="shuf" aria-pressed="false">Aleatorio</button>
+      <button id="prev">Anterior</button>
+      <button id="play">Reproducir</button>
+      <button id="next">Siguiente</button>
+      <button id="rep" aria-pressed="false">Repetir</button>
     </div>
-    <div class="player-main">
-      <div class="player-controls">
-        <button class="player-control" id="shuffleButton" aria-label="Reproducción aleatoria" title="Aleatorio"><span data-icon="shuffle"></span></button>
-        <button class="player-control" id="previousButton" aria-label="Anterior" title="Anterior"><span data-icon="previous"></span></button>
-        <button class="play-button" id="playButton" aria-label="Reproducir" title="Reproducir"><span data-icon="play"></span></button>
-        <button class="player-control" id="nextButton" aria-label="Siguiente" title="Siguiente"><span data-icon="next"></span></button>
-        <button class="player-control" id="repeatButton" aria-label="Repetición desactivada" title="Repetir: desactivado"><span data-icon="repeat"></span></button>
-        <button class="icon-button player-expand-button" id="expandPlayerButton" aria-label="Abrir reproductor a pantalla completa" title="Reproductor a pantalla completa" disabled><span data-icon="expand"></span></button>
-      </div>
-      <div class="timeline">
-        <time id="elapsedTime">0:00</time>
-        <input id="seekBar" type="range" min="0" max="1000" value="0" aria-label="Posición de reproducción">
-        <time id="totalTime">0:00</time>
-      </div>
-    </div>
-    <div class="player-tools">
-      <button class="icon-button queue-button" id="queueButton" aria-label="Abrir cola" title="Cola"><span data-icon="queue"></span></button>
-      <span class="volume-icon" data-icon="volume"></span>
-      <input id="volumeBar" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volumen">
-    </div>
-  </footer>
-
-  <section class="full-player" id="fullPlayer" hidden role="dialog" aria-modal="true" aria-label="reproductor a pantalla completa" aria-hidden="true">
-    <div class="full-player-backdrop" aria-hidden="true"></div>
-    <div class="full-player-inner">
-      <header class="full-player-header">
-        <div class="full-player-brand"><span class="full-player-brand-mark">♫</span><span>davixiniTracker</span><small>ahora suena</small></div>
-        <button class="full-player-close" id="fullPlayerClose"><span>minimizar</span><span aria-hidden="true">↘</span></button>
-      </header>
-      <main class="full-player-content">
-        <div class="full-player-art-column">
-          <div class="full-player-art" id="fullPlayerArtwork"><span class="full-player-placeholder">♪</span></div>
-          <div class="full-player-art-caption"><span class="full-player-live-dot"></span> reproduciendo desde tu biblioteca</div>
-        </div>
-        <section class="full-player-details" aria-label="controles de reproducción">
-          <p class="full-player-kicker">tu música, a tu manera</p>
-          <h1 id="fullPlayerTitle">elige una canción</h1>
-          <p class="full-player-artist" id="fullPlayerArtist">tu biblioteca te espera</p>
-          <div class="full-player-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="full-player-timeline">
-            <div class="full-player-times"><time id="fullPlayerElapsed">0:00</time><time id="fullPlayerTotal">0:00</time></div>
-            <input id="fullPlayerSeekBar" type="range" min="0" max="1000" value="0" aria-label="Posición de reproducción">
-          </div>
-          <div class="full-player-controls">
-            <button class="full-player-control" id="fullPlayerShuffle" aria-label="Reproducción aleatoria" title="Aleatorio"><span data-icon="shuffle"></span></button>
-            <button class="full-player-control" id="fullPlayerPrevious" aria-label="Canción anterior" title="Anterior"><span data-icon="previous"></span></button>
-            <button class="full-player-play" id="fullPlayerPlay" aria-label="Reproducir" title="Reproducir"><span data-icon="play"></span></button>
-            <button class="full-player-control" id="fullPlayerNext" aria-label="Siguiente canción" title="Siguiente"><span data-icon="next"></span></button>
-            <button class="full-player-control" id="fullPlayerRepeat" aria-label="Cambiar repetición" title="Repetir"><span data-icon="repeat"></span></button>
-          </div>
-          <div class="full-player-bottom">
-            <button class="full-player-action" id="fullPlayerFavorite" aria-label="Añadir a favoritos" title="Favoritos"><span data-icon="heart"></span><small>favorito</small></button>
-            <button class="full-player-action" id="fullPlayerQueue" aria-label="Abrir cola" title="Cola de reproducción"><span data-icon="queue"></span><small>cola</small></button>
-            <label class="full-player-speed"><small>velocidad</small><select id="fullPlayerSpeed" aria-label="Velocidad de reproducción"><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select></label>
-            <label class="full-player-volume"><span data-icon="volume"></span><input id="fullPlayerVolume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volumen"></label>
-          </div>
-        </section>
-      </main>
-      <footer class="full-player-footer"><span>biblioteca compartida en la nube</span><span>monocromo · negro · gris</span></footer>
-    </div>
-  </section>
-
-  <audio id="audioEngine" preload="metadata"></audio>
-  <input id="audioFileInput" class="visually-hidden" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.webm,.mp4,.aiff,.aif,.wma" multiple>
-  <input id="replaceAudioFileInput" class="visually-hidden" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.opus,.wav,.flac,.webm,.mp4,.aiff,.aif,.wma">
-  <input id="coverFileInput" class="visually-hidden" type="file" accept="image/*">
-  <input id="backupFileInput" class="visually-hidden" type="file" accept="application/json,.json">
-
-  <div class="modal-backdrop" id="modalBackdrop" hidden>
-    <section class="modal" id="modalPanel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <header class="modal-header"><div><p class="modal-kicker" id="modalKicker">biblioteca</p><h2 id="modalTitle">nuevo álbum</h2></div><button class="icon-button" id="modalClose" aria-label="Cerrar"><span data-icon="close"></span></button></header>
-      <div class="modal-content" id="modalContent"></div>
-    </section>
+    <div class="seekrow"><time id="el">0:00</time><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Posición"><time id="tot">0:00</time></div>
   </div>
-
-  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="./supabase-config.js" defer></script>
-  <script src="./supabase-cloud.js?v=2" defer></script>
-  <script src="./app.js?v=26" defer></script>
-  <script src="./extras.js?v=20" defer></script>
+  <div class="tools">
+    <button id="pLike" aria-pressed="false">Me gusta</button>
+    <button id="qBtn">Cola</button>
+    <input id="vol" type="range" min="0" max="1" step="0.01" aria-label="Volumen">
+  </div>
+</footer>
+<dialog id="queue"><h2>Cola</h2><div id="qList"></div><form method="dialog"><button class="btn">Cerrar</button></form></dialog>
+<div id="toast" hidden></div>
+<audio id="au" preload="metadata"></audio>
+<script src="supabase-config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
