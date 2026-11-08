@@ -36,7 +36,7 @@
 
   function loginView() {
     root.innerHTML = `<h1>Entrar</h1><p class="sub" id="log">${esc(note || 'Solo las cuentas autorizadas en Supabase pueden publicar.')}</p>
-      <form id="fLogin"><label for="em">Correo</label><input id="em" name="email" type="email" autocomplete="username" required>
+      <form id="fLogin" class="panel"><label for="em">Correo</label><input id="em" name="email" type="email" autocomplete="username" required>
       <label for="pw">Contraseña</label><input id="pw" name="password" type="password" autocomplete="current-password" required>
       <p><button class="btn">Iniciar sesión</button></p></form>`;
   }
@@ -44,15 +44,15 @@
   function view() {
     root.innerHTML = `<h1>Administrar</h1><p class="sub" id="log">${esc(note || 'Solo lo que subas aquí aparece en la web.')}</p>
       <h2>Subir canciones</h2>
-      <form id="fTrack"><label>Archivos de audio (el título sale del nombre del archivo)</label><input type="file" name="files" accept="audio/*" multiple required>
+      <form id="fTrack" class="panel"><label>Archivos de audio (el título sale del nombre del archivo)</label><input type="file" name="files" accept="audio/*" multiple required>
       <label>Álbum</label><select name="album"><option value="">Sin álbum</option>${opts(albums, r => r.data.title || r.id)}</select>
       <label>Artistas (hasta 10; Ctrl o ⌘ para elegir varios)</label><select name="artists" multiple size="5">${opts(artists, nameOf)}</select>
       <label>Género</label><input type="text" name="genre"><label>Año</label><input type="number" name="year" min="1900" max="2100">
       <p><button class="btn">Subir</button></p></form>
       <h2>Nuevo artista</h2>
-      <form id="fArtist"><label>Nombre</label><input type="text" name="name" required><label>Biografía</label><textarea name="bio" rows="3"></textarea><p><button class="btn">Crear artista</button></p></form>
+      <form id="fArtist" class="panel"><label>Nombre</label><input type="text" name="name" required><label>Biografía</label><textarea name="bio" rows="3"></textarea><p><button class="btn">Crear artista</button></p></form>
       <h2>Nuevo álbum</h2>
-      <form id="fAlbum"><label>Título</label><input type="text" name="title" required>
+      <form id="fAlbum" class="panel"><label>Título</label><input type="text" name="title" required>
       <label>Artistas</label><select name="artists" multiple size="4">${opts(artists, nameOf)}</select>
       <label>Año</label><input type="number" name="year" min="1900" max="2100"><label>Género</label><input type="text" name="genre">
       <label>Descripción</label><textarea name="desc" rows="3"></textarea><label>Portada</label><input type="file" name="cover" accept="image/*">
@@ -61,7 +61,12 @@
       ${section('albums', `Álbumes (${albums.length})`, albums, names)}
       ${section('artists', `Artistas (${artists.length})`, artists, () => '')}`;
   }
-  const section = (kind, title, list, sub) => `<h2>${title}</h2><ul class="list">${list.map(r => `<li class="row" style="cursor:default"><span class="t"><b>${esc(nameOf(r))}</b><small>${esc(sub(r))}</small></span><button class="like" data-act="rename" data-k="${kind}" data-id="${esc(r.id)}">Renombrar</button><button class="like" data-act="del" data-k="${kind}" data-id="${esc(r.id)}">Borrar</button></li>`).join('')}</ul>`;
+  const url = p => (p ? `${C.url}/storage/v1/object/public/${C.bucket}/${p.split('/').map(encodeURIComponent).join('/')}` : '');
+  const thumb = (kind, r) => {
+    const p = kind === 'albums' ? r.cover_path : kind === 'tracks' ? (albums.find(a => a.id === r.album_id)?.cover_path || r.artwork_path) : '';
+    return kind === 'artists' ? `<span class="av">${esc([...nameOf(r)][0] || '')}</span>` : p ? `<img src="${esc(url(p))}" alt="">` : '<div class="ph"></div>';
+  };
+  const section = (kind, title, list, sub) => `<h2>${title}</h2><ul class="list">${list.map(r => `<li class="row" style="cursor:default">${thumb(kind, r)}<span class="t"><b>${esc(nameOf(r))}</b><small>${esc(sub(r))}</small></span><button class="btn sm" data-act="edit" data-k="${kind}" data-id="${esc(r.id)}">Editar</button><button class="btn sm" data-act="del" data-k="${kind}" data-id="${esc(r.id)}">Borrar</button></li>`).join('')}</ul>`;
 
   const forms = {
     async fLogin(e) {
@@ -113,6 +118,7 @@
     const { act: a, k, id } = btn.dataset, table = TABLE[k];
     const row = { tracks, albums, artists }[k].find(r => r.id === id);
     try {
+      if (a === 'edit') { editDialog(k, row); return; }
       if (a === 'rename') {
         const title = prompt('Nuevo nombre', nameOf(row)); if (!title || !title.trim()) return;
         const data = { ...row.data, [k === 'artists' ? 'name' : 'title']: title.trim() };
@@ -131,6 +137,46 @@
     await refresh(); view();
   }
 
+  const FIELDS = {
+    tracks: [['title', 'Título', 'text'], ['album_id', 'Álbum', 'album'], ['artistIds', 'Artistas', 'artists'], ['genre', 'Género', 'text'], ['year', 'Año', 'number']],
+    albums: [['title', 'Título', 'text'], ['artistIds', 'Artistas', 'artists'], ['year', 'Año', 'number'], ['genre', 'Género', 'text'], ['description', 'Descripción', 'area'], ['cover', 'Cambiar portada', 'file']],
+    artists: [['name', 'Nombre', 'text'], ['bio', 'Biografía', 'area']]
+  };
+  let editing = null;
+  function editDialog(k, row) {
+    editing = { k, row };
+    const field = ([key, label, type]) => {
+      const v = key === 'album_id' ? row.album_id : row.data[key];
+      let el;
+      if (type === 'album') el = `<select name="${key}"><option value="">Sin álbum</option>${albums.map(a => `<option value="${esc(a.id)}"${a.id === v ? ' selected' : ''}>${esc(a.data.title || a.id)}</option>`).join('')}</select>`;
+      else if (type === 'artists') el = `<select name="${key}" multiple size="5">${artists.map(a => `<option value="${esc(a.id)}"${(v || []).includes(a.id) ? ' selected' : ''}>${esc(nameOf(a))}</option>`).join('')}</select>`;
+      else if (type === 'area') el = `<textarea name="${key}" rows="3">${esc(v)}</textarea>`;
+      else if (type === 'file') el = `<input type="file" name="${key}" accept="image/*">`;
+      else el = `<input type="${type}" name="${key}" value="${esc(v)}">`;
+      return `<label>${label}</label>${el}`;
+    };
+    $('#editBody').innerHTML = `<h2>Editar</h2>${FIELDS[k].map(field).join('')}<p class="acts"><button class="btn solid">Guardar</button><button type="button" class="btn" data-close>Cancelar</button></p>`;
+    $('#dlg').showModal();
+  }
+  $('#fEdit').addEventListener('submit', async e => {
+    e.preventDefault();
+    const { k, row } = editing, fd = new FormData(e.target), data = { ...row.data }, patch = {};
+    try {
+      for (const [key, , type] of FIELDS[k]) {
+        if (key === 'album_id') patch.album_id = fd.get(key) || null;
+        else if (key === 'artistIds') data.artistIds = fd.getAll(key).slice(0, 10);
+        else if (type === 'file') {
+          const f = fd.get(key);
+          if (f && f.size) { patch.cover_path = await upload(`covers/${row.id}/${Date.now()}.${ext(f)}`, f); if (row.cover_path) await sb.storage.from(C.bucket).remove([row.cover_path]); }
+        } else data[key] = String(fd.get(key) || '').trim();
+      }
+      const { error } = await sb.from(TABLE[k]).update({ ...patch, data, updated_at: new Date().toISOString() }).eq('id', row.id);
+      if (error) throw error;
+      say('Cambios guardados.');
+    } catch (err) { say('Error: ' + (err.message || err)); }
+    $('#dlg').close(); await refresh(); view();
+  });
+  document.addEventListener('click', e => { const c = e.target.closest('[data-close]'); if (c) c.closest('dialog').close(); });
   root.addEventListener('submit', async e => {
     const h = forms[e.target.id]; if (!h) return;
     e.preventDefault();

@@ -7,11 +7,13 @@
 <meta name="theme-color" content="#000000">
 <title>Administrar · davixiniTracker</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-<header class="top"><a class="logo" href="./">davixiniTracker</a><nav><span>Administración</span></nav><button id="out" class="btn" hidden>Cerrar sesión</button></header>
+<body class="solo">
+<header class="top"><a class="brand" href="./"><img src="icon.svg" alt=""><b>davixiniTracker</b></a><a class="btn sm" href="./">Volver a la web</a><button id="out" class="btn sm" hidden>Cerrar sesión</button></header>
 <main id="adm"><p class="sub">Cargando…</p></main>
+<dialog id="dlg"><form id="fEdit"><div id="editBody"></div></form></dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="supabase-config.js"></script>
 <script src="admin.js"></script>

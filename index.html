@@ -12,39 +12,52 @@
 <title>davixiniTracker</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="top">
-  <a class="logo" href="#/">davixiniTracker</a>
+<aside class="side">
+  <a class="brand" href="#/"><img src="icon.svg" alt=""><b>davixiniTracker</b></a>
   <nav id="nav" aria-label="Navegación">
-    <a href="#/songs" data-p="songs">Canciones</a>
-    <a href="#/albums" data-p="albums">Álbumes</a>
-    <a href="#/artists" data-p="artists">Artistas</a>
-    <a href="#/likes" data-p="likes">Me gusta</a>
+    <a href="#/" data-p=""><i data-i="home"></i>Inicio</a>
+    <a href="#/songs" data-p="songs"><i data-i="music"></i>Canciones</a>
+    <a href="#/albums" data-p="albums"><i data-i="albums"></i>Álbumes</a>
+    <a href="#/artists" data-p="artists"><i data-i="artist"></i>Artistas</a>
+    <a href="#/likes" data-p="likes"><i data-i="heart"></i>Me gusta</a>
   </nav>
-  <input id="q" type="search" placeholder="Buscar ( / )" aria-label="Buscar">
-</header>
-<main id="view"><p class="sub">Cargando…</p></main>
+  <a class="admin" href="admin.html"><i data-i="sliders"></i>Administrar</a>
+</aside>
+<div class="col">
+  <div class="bar"><label class="search"><i data-i="search"></i><input id="q" type="search" placeholder="Buscar canciones, álbumes y artistas" aria-label="Buscar"></label></div>
+  <main id="view"><p class="sub">Cargando…</p></main>
+</div>
 <footer class="player" id="player" hidden>
   <div class="now"><div class="pa" id="pArt"></div><div><b id="pTitle"></b><span id="pArtist"></span></div></div>
   <div class="mid">
     <div class="ctl">
-      <button id="shuf" aria-pressed="false">Aleatorio</button>
-      <button id="prev">Anterior</button>
-      <button id="play">Reproducir</button>
-      <button id="next">Siguiente</button>
-      <button id="rep" aria-pressed="false">Repetir</button>
+      <button id="shuf" aria-pressed="false" aria-label="Aleatorio" title="Aleatorio" data-i="shuffle"></button>
+      <button id="prev" aria-label="Anterior" title="Anterior" data-i="prev"></button>
+      <button id="play" aria-label="Reproducir o pausar" title="Reproducir / pausar" data-i="play"></button>
+      <button id="next" aria-label="Siguiente" title="Siguiente" data-i="next"></button>
+      <button id="rep" aria-pressed="false" aria-label="Repetir" title="Repetir" data-i="repeat"></button>
     </div>
     <div class="seekrow"><time id="el">0:00</time><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Posición"><time id="tot">0:00</time></div>
   </div>
   <div class="tools">
-    <button id="pLike" aria-pressed="false">Me gusta</button>
-    <button id="qBtn">Cola</button>
+    <button id="pLike" aria-pressed="false" aria-label="Me gusta" title="Me gusta" data-i="heart"></button>
+    <button id="qBtn" aria-label="Cola" title="Cola" data-i="queue"></button>
     <input id="vol" type="range" min="0" max="1" step="0.01" aria-label="Volumen">
   </div>
 </footer>
 <dialog id="queue"><h2>Cola</h2><div id="qList"></div><form method="dialog"><button class="btn">Cerrar</button></form></dialog>
+<dialog id="np">
+  <button class="x" data-close aria-label="Cerrar" data-i="close"></button>
+  <div id="npArt"></div><h2 id="npTitle"></h2><p id="npArtist"></p>
+  <div class="seekrow"><input id="npSeek" type="range" min="0" max="1000" value="0" aria-label="Posición"></div>
+  <div class="ctl"><button data-cmd="prev" aria-label="Anterior" data-i="prev"></button><button id="npPlay" data-cmd="play" aria-label="Reproducir o pausar" data-i="play"></button><button data-cmd="next" aria-label="Siguiente" data-i="next"></button></div>
+</dialog>
 <div id="toast" hidden></div>
 <audio id="au" preload="metadata"></audio>
 <script src="supabase-config.js"></script>
