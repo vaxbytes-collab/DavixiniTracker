@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -11,56 +11,145 @@
 <meta property="og:type" content="website">
 <title>davixiniTracker</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap">
 <link rel="stylesheet" href="styles.css">
+<script>
+  /* aplica tema y acento antes del primer pintado para evitar el parpadeo */
+  try {
+    const s = JSON.parse(localStorage.getItem('dt-settings') || '{}');
+    const t = s.theme === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : (s.theme || 'dark');
+    document.documentElement.dataset.theme = t;
+    if (s.accent) document.documentElement.style.setProperty('--accent', s.accent);
+  } catch (e) { /* valores por defecto */ }
+</script>
 </head>
-<body>
-<aside class="side">
+<body data-player="off">
+<a class="skip" href="#view">Saltar al contenido</a>
+<div id="routebar" aria-hidden="true"></div>
+
+<aside class="side" id="side">
   <a class="brand" href="#/"><img src="icon.svg" alt=""><b>davixiniTracker</b></a>
-  <nav id="nav" aria-label="Navegación">
+  <nav id="nav" aria-label="Principal">
     <a href="#/" data-p=""><i data-i="home"></i>Inicio</a>
-    <a href="#/songs" data-p="songs"><i data-i="music"></i>Canciones</a>
-    <a href="#/albums" data-p="albums"><i data-i="albums"></i>Álbumes</a>
-    <a href="#/artists" data-p="artists"><i data-i="artist"></i>Artistas</a>
-    <a href="#/likes" data-p="likes"><i data-i="heart"></i>Me gusta</a>
+    <a href="#/explore" data-p="explore"><i data-i="explore"></i>Explorar</a>
+    <a href="#/search" data-p="search"><i data-i="search"></i>Buscar</a>
+    <a href="#/library" data-p="library"><i data-i="library"></i>Biblioteca</a>
+    <div class="group">
+      <a href="#/songs" data-p="songs"><i data-i="music"></i>Canciones</a>
+      <a href="#/albums" data-p="albums"><i data-i="albums"></i>Álbumes</a>
+      <a href="#/artists" data-p="artists"><i data-i="artist"></i>Artistas</a>
+      <a href="#/playlists" data-p="playlists"><i data-i="playlist"></i>Listas</a>
+      <a href="#/likes" data-p="likes"><i data-i="heart"></i>Favoritos</a>
+      <a href="#/history" data-p="history"><i data-i="clock"></i>Historial</a>
+    </div>
+    <a href="#/stats" data-p="stats"><i data-i="chart"></i>Estadísticas</a>
   </nav>
-  <a class="admin" href="admin.html"><i data-i="sliders"></i>Administrar</a>
+  <div class="side-foot">
+    <a href="#/settings" data-p="settings"><i data-i="sliders"></i>Ajustes</a>
+    <a href="admin.html" id="adminLink" hidden><i data-i="lock"></i>Administrar</a>
+  </div>
 </aside>
+
 <div class="col">
-  <div class="bar"><label class="search"><i data-i="search"></i><input id="q" type="search" placeholder="Buscar canciones, álbumes y artistas" aria-label="Buscar"></label></div>
-  <main id="view"><p class="sub">Cargando…</p></main>
+  <header class="bar">
+    <div class="hist"><button class="ib" id="back" aria-label="Atrás" data-i="left"></button><button class="ib" id="fwd" aria-label="Adelante" data-i="right"></button></div>
+    <label class="search"><i data-i="search"></i><input id="q" type="search" placeholder="Buscar en la biblioteca" aria-label="Buscar" autocomplete="off"></label>
+    <div class="bar-r">
+      <span id="sess" class="sess" hidden></span>
+      <button class="ib" id="panelBtn" aria-label="Panel contextual" aria-pressed="false" title="Panel contextual (Q)" data-i="queue"></button>
+      <a class="ib" href="#/settings" aria-label="Ajustes" title="Ajustes" data-i="sliders"></a>
+    </div>
+  </header>
+  <main id="view" tabindex="-1"><p class="sub">Cargando…</p></main>
 </div>
-<footer class="player" id="player" hidden>
-  <div class="now"><div class="pa" id="pArt"></div><div><b id="pTitle"></b><span id="pArtist"></span></div></div>
+
+<aside class="rp" id="rp" aria-label="Panel contextual" hidden>
+  <div class="tabs" role="tablist" id="rpTabs">
+    <button role="tab" data-tab="queue">Cola</button><button role="tab" data-tab="now">Ahora</button><button role="tab" data-tab="lyrics">Letra</button>
+    <button class="ib" data-act="panel" aria-label="Cerrar panel" data-i="close"></button>
+  </div>
+  <div id="rpBody" class="rp-body"></div>
+</aside>
+
+<nav class="tabbar" id="tabbar" aria-label="Navegación móvil">
+  <a href="#/" data-p=""><i data-i="home"></i><span>Inicio</span></a>
+  <a href="#/explore" data-p="explore"><i data-i="explore"></i><span>Explorar</span></a>
+  <a href="#/search" data-p="search"><i data-i="search"></i><span>Buscar</span></a>
+  <a href="#/library" data-p="library"><i data-i="library"></i><span>Biblioteca</span></a>
+  <a href="#/settings" data-p="settings"><i data-i="sliders"></i><span>Ajustes</span></a>
+</nav>
+
+<footer class="player" id="player" hidden data-mode="full">
+  <div class="now" id="now" role="button" tabindex="0" aria-label="Abrir reproductor ampliado">
+    <div class="pa" id="pArt"></div>
+    <div class="nt"><b id="pTitle"></b><span id="pArtist"></span></div>
+  </div>
   <div class="mid">
     <div class="ctl">
-      <button id="shuf" aria-pressed="false" aria-label="Aleatorio" title="Aleatorio" data-i="shuffle"></button>
-      <button id="prev" aria-label="Anterior" title="Anterior" data-i="prev"></button>
-      <button id="play" aria-label="Reproducir o pausar" title="Reproducir / pausar" data-i="play"></button>
-      <button id="next" aria-label="Siguiente" title="Siguiente" data-i="next"></button>
-      <button id="rep" aria-pressed="false" aria-label="Repetir" title="Repetir" data-i="repeat"></button>
+      <button data-cmd="shuffle" class="c-shuf" aria-pressed="false" aria-label="Aleatorio" title="Aleatorio (S)" data-i="shuffle"></button>
+      <button data-cmd="prev" aria-label="Anterior" title="Anterior" data-i="prev"></button>
+      <button data-cmd="toggle" class="playbtn" aria-label="Reproducir" title="Reproducir / pausar (espacio)" data-i="play"></button>
+      <button data-cmd="next" aria-label="Siguiente" title="Siguiente" data-i="next"></button>
+      <button data-cmd="repeat" class="c-rep" aria-pressed="false" aria-label="Repetir" title="Repetir (R)" data-i="repeat"></button>
     </div>
-    <div class="seekrow"><time id="el">0:00</time><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Posición"><time id="tot">0:00</time></div>
+    <div class="seekrow"><time data-t="el">0:00</time><input class="seek rng" type="range" min="0" max="1000" value="0" step="1" aria-label="Posición en la canción"><time data-t="tot">0:00</time></div>
   </div>
   <div class="tools">
-    <button id="pLike" aria-pressed="false" aria-label="Me gusta" title="Me gusta" data-i="heart"></button>
-    <button id="qBtn" aria-label="Cola" title="Cola" data-i="queue"></button>
-    <input id="vol" type="range" min="0" max="1" step="0.01" aria-label="Volumen">
+    <button data-cmd="like" aria-pressed="false" aria-label="Me gusta" title="Me gusta (L)" data-i="heart"></button>
+    <button id="xfBtn" aria-haspopup="dialog" aria-expanded="false" aria-label="Crossfade y temporizador" title="Crossfade y temporizador" data-i="xfade"></button>
+    <button id="qBtn" aria-label="Cola" title="Cola (Q)" data-i="queue"></button>
+    <button data-cmd="mute" id="muteBtn" aria-label="Silenciar" title="Silenciar (M)" data-i="volume"></button>
+    <input id="vol" class="rng" type="range" min="0" max="1" step="0.01" aria-label="Volumen">
+    <button id="miniBtn" aria-label="Reproductor compacto" title="Reproductor compacto" data-i="shrink"></button>
+    <button id="expBtn" aria-label="Reproductor ampliado" title="Reproductor ampliado" data-i="expand"></button>
   </div>
+  <button class="ib mini-exp" id="miniExp" aria-label="Restaurar reproductor" data-i="expand"></button>
 </footer>
-<dialog id="queue"><h2>Cola</h2><div id="qList"></div><form method="dialog"><button class="btn">Cerrar</button></form></dialog>
-<dialog id="np">
-  <button class="x" data-close aria-label="Cerrar" data-i="close"></button>
-  <div id="npArt"></div><h2 id="npTitle"></h2><p id="npArtist"></p>
-  <div class="seekrow"><input id="npSeek" type="range" min="0" max="1000" value="0" aria-label="Posición"></div>
-  <div class="ctl"><button data-cmd="prev" aria-label="Anterior" data-i="prev"></button><button id="npPlay" data-cmd="play" aria-label="Reproducir o pausar" data-i="play"></button><button data-cmd="next" aria-label="Siguiente" data-i="next"></button></div>
+
+<dialog id="np" aria-label="Reproductor ampliado">
+  <div class="np-top"><button class="ib" data-close aria-label="Cerrar" data-i="down"></button><span class="eyebrow">Reproduciendo</span><span></span></div>
+  <div class="np-body">
+    <div class="np-main">
+      <div id="npArt" class="np-art"></div>
+      <div class="np-info"><h2 id="npTitle"></h2><p id="npArtist"></p></div>
+      <div class="seekrow"><time data-t="el">0:00</time><input class="seek rng" type="range" min="0" max="1000" value="0" step="1" aria-label="Posición en la canción"><time data-t="tot">0:00</time></div>
+      <div class="ctl">
+        <button data-cmd="shuffle" class="c-shuf" aria-pressed="false" aria-label="Aleatorio" data-i="shuffle"></button>
+        <button data-cmd="prev" aria-label="Anterior" data-i="prev"></button>
+        <button data-cmd="toggle" class="playbtn" aria-label="Reproducir" data-i="play"></button>
+        <button data-cmd="next" aria-label="Siguiente" data-i="next"></button>
+        <button data-cmd="repeat" class="c-rep" aria-pressed="false" aria-label="Repetir" data-i="repeat"></button>
+      </div>
+      <div class="ctl sec-ctl">
+        <button data-cmd="like" aria-pressed="false" aria-label="Me gusta" data-i="heart"></button>
+        <button id="npXf" aria-haspopup="dialog" aria-expanded="false" aria-label="Crossfade y temporizador" data-i="xfade"></button>
+      </div>
+    </div>
+    <div class="np-side">
+      <div class="tabs" role="tablist" id="npTabs"><button role="tab" data-tab="queue">Cola</button><button role="tab" data-tab="lyrics">Letra</button><button role="tab" data-tab="credits">Créditos</button><button role="tab" data-tab="album">Álbum</button></div>
+      <div id="npPane" class="rp-body"></div>
+    </div>
+  </div>
 </dialog>
-<div id="toast" hidden></div>
-<audio id="au" preload="metadata"></audio>
+
+<dialog id="dlg"></dialog>
+<dialog id="ask"></dialog>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
 <script src="supabase-config.js"></script>
-<script src="app.js"></script>
+<script src="js/core.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/data.js"></script>
+<script src="js/player.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/views.js"></script>
+<script src="js/views-stats.js"></script>
+<script src="js/views-settings.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

@@ -1,0 +1,32 @@
+/* administración */
+#adm{max-width:1000px;margin:0 auto;padding-top:24px}
+.atabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:18px 0 22px;flex-wrap:wrap}
+.atabs button{padding:9px 16px;color:var(--mute);font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px}
+.atabs button[aria-selected=true]{color:var(--fg);border-color:var(--accent)}
+.status{border-left:3px solid var(--accent);padding:8px 14px;margin:14px 0;background:var(--hi);border-radius:0 8px 8px 0}
+.status.err{border-color:#e0523f}
+.drop{border:1.5px dashed var(--line2);border-radius:14px;padding:28px;text-align:center;color:var(--mute);cursor:pointer;display:block;margin:0}
+.drop.over,.drop:hover{border-color:var(--accent);color:var(--fg)}
+.drop input{display:none}
+.queue{list-style:none;padding:0;margin:12px 0}
+.queue li{display:grid;grid-template-columns:minmax(0,1fr) 90px 150px;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.queue input[type=text]{padding:6px 10px}
+.queue .meta{color:var(--mute);font-size:.82rem;text-align:right}
+.queue .st-bad{color:#ff6b5c;font-size:.84rem;grid-column:1/-1}
+.prog{height:6px;background:var(--line2);border-radius:3px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
+.prog.done i{background:#6fbf73}
+.prog.fail i{background:#e0523f}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.alist .row{cursor:default}
+.alist .row .sel{margin-right:2px}
+.bulk{position:sticky;top:0;z-index:3;background:var(--bg);display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 0;border-bottom:1px solid var(--accent)}
+.bulk b{margin-right:auto}
+.order{list-style:none;padding:0;margin:8px 0}
+.order li{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)}
+.order li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dupes li{padding:10px 0;border-bottom:1px solid var(--line)}
+.dupes small{display:block}
+dialog#dlg{width:min(600px,94vw)}
+dialog textarea{resize:vertical}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}.queue li{grid-template-columns:1fr}.queue .meta{text-align:left}}
